@@ -2,26 +2,29 @@ const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
-require('dotenv').config();
+
+// Load environment configuration
+const config = require('./config/environment');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
 // Security middleware
 app.use(helmet());
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.'
+  windowMs: config.RATE_LIMIT_WINDOW_MS,
+  max: config.RATE_LIMIT_MAX_REQUESTS,
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 app.use('/api/', limiter);
 
 // CORS configuration
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || 'http://localhost:8080',
-  credentials: true,
+  origin: config.CORS_ORIGIN,
+  credentials: config.CORS_CREDENTIALS,
   optionsSuccessStatus: 200
 };
 app.use(cors(corsOptions));
@@ -35,7 +38,8 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
+    environment: config.NODE_ENV,
+    port: config.PORT
   });
 });
 
@@ -48,7 +52,7 @@ app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({
     error: 'Something went wrong!',
-    message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
+    message: config.NODE_ENV === 'development' ? err.message : 'Internal server error'
   });
 });
 
@@ -59,10 +63,11 @@ app.use('*', (req, res) => {
 
 // Start server
 if (require.main === module) {
-  app.listen(PORT, () => {
-    console.log(`CleanStreak Backend Server running on port ${PORT}`);
-    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`Health check: http://localhost:${PORT}/api/health`);
+  app.listen(config.PORT, config.HOST, () => {
+    console.log(`CleanStreak Backend Server running on ${config.HOST}:${config.PORT}`);
+    console.log(`Environment: ${config.NODE_ENV}`);
+    console.log(`Health check: http://${config.HOST}:${config.PORT}/api/health`);
+    console.log(`CORS origins: ${Array.isArray(config.CORS_ORIGIN) ? config.CORS_ORIGIN.join(', ') : config.CORS_ORIGIN}`);
   });
 }
 

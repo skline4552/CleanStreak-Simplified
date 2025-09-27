@@ -1,0 +1,109 @@
+const path = require('path');
+require('dotenv').config();
+
+const NODE_ENV = process.env.NODE_ENV || 'development';
+
+// Load environment-specific configuration
+const envFile = path.join(__dirname, '..', '..', `.env.${NODE_ENV}`);
+require('dotenv').config({ path: envFile });
+
+const config = {
+  // Application settings
+  NODE_ENV,
+  PORT: parseInt(process.env.PORT, 10) || 3000,
+  HOST: process.env.HOST || 'localhost',
+
+  // Database configuration
+  DATABASE_URL: process.env.DATABASE_URL || getDatabaseUrl(),
+
+  // JWT configuration
+  JWT_SECRET: process.env.JWT_SECRET || generateDefaultSecret(),
+  JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET || generateDefaultSecret('refresh'),
+  JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '15m',
+  JWT_REFRESH_EXPIRES_IN: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
+
+  // Cookie configuration
+  COOKIE_SECRET: process.env.COOKIE_SECRET || generateDefaultSecret('cookie'),
+  COOKIE_SECURE: process.env.COOKIE_SECURE === 'true' || NODE_ENV === 'production',
+  COOKIE_SAME_SITE: process.env.COOKIE_SAME_SITE || (NODE_ENV === 'production' ? 'strict' : 'lax'),
+
+  // CORS configuration
+  CORS_ORIGIN: process.env.CORS_ORIGIN || getCorsOrigin(),
+  CORS_CREDENTIALS: process.env.CORS_CREDENTIALS === 'true' || true,
+
+  // Rate limiting
+  RATE_LIMIT_WINDOW_MS: parseInt(process.env.RATE_LIMIT_WINDOW_MS, 10) || 15 * 60 * 1000, // 15 minutes
+  RATE_LIMIT_MAX_REQUESTS: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS, 10) || 100,
+
+  // Security
+  BCRYPT_SALT_ROUNDS: parseInt(process.env.BCRYPT_SALT_ROUNDS, 10) || 12,
+
+  // Logging
+  LOG_LEVEL: process.env.LOG_LEVEL || (NODE_ENV === 'production' ? 'info' : 'debug'),
+
+  // Database connection pool (for PostgreSQL)
+  DB_POOL_MIN: parseInt(process.env.DB_POOL_MIN, 10) || 2,
+  DB_POOL_MAX: parseInt(process.env.DB_POOL_MAX, 10) || 10,
+  DB_POOL_ACQUIRE_TIMEOUT: parseInt(process.env.DB_POOL_ACQUIRE_TIMEOUT, 10) || 60000,
+  DB_POOL_IDLE_TIMEOUT: parseInt(process.env.DB_POOL_IDLE_TIMEOUT, 10) || 10000,
+};
+
+function getDatabaseUrl() {
+  if (NODE_ENV === 'production') {
+    return process.env.DATABASE_URL || 'postgresql://user:password@localhost:5432/cleanstreak_prod';
+  } else if (NODE_ENV === 'test') {
+    return 'file:./test.db';
+  } else {
+    return 'file:./dev.db';
+  }
+}
+
+function getCorsOrigin() {
+  if (NODE_ENV === 'production') {
+    return process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : ['https://cleanstreak.com'];
+  } else {
+    return ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000'];
+  }
+}
+
+function generateDefaultSecret(type = 'main') {
+  if (NODE_ENV === 'production') {
+    throw new Error(`${type.toUpperCase()}_SECRET must be set in production environment`);
+  }
+
+  // Generate a deterministic but secure default for development
+  const crypto = require('crypto');
+  const base = `cleanstreak-${type}-${NODE_ENV}`;
+  return crypto.createHash('sha256').update(base).digest('hex');
+}
+
+// Validation
+function validateConfig() {
+  const required = [];
+
+  if (NODE_ENV === 'production') {
+    required.push(
+      'JWT_SECRET',
+      'JWT_REFRESH_SECRET',
+      'COOKIE_SECRET',
+      'DATABASE_URL'
+    );
+  }
+
+  const missing = required.filter(key => !process.env[key]);
+  if (missing.length > 0) {
+    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+  }
+
+  // Validate JWT secret strength in production
+  if (NODE_ENV === 'production') {
+    if (process.env.JWT_SECRET && process.env.JWT_SECRET.length < 32) {
+      throw new Error('JWT_SECRET must be at least 32 characters long in production');
+    }
+  }
+}
+
+// Run validation
+validateConfig();
+
+module.exports = config;
