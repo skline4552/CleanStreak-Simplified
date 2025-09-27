@@ -25,6 +25,7 @@ model User {
   // Relationships
   streaks           UserStreak[]
   completions       CompletionHistory[]
+  sessions          UserSession[]
 
   // Indexes for performance
   @@map("users")
