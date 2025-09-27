@@ -46,6 +46,23 @@ const config = {
   DB_POOL_MAX: parseInt(process.env.DB_POOL_MAX, 10) || 10,
   DB_POOL_ACQUIRE_TIMEOUT: parseInt(process.env.DB_POOL_ACQUIRE_TIMEOUT, 10) || 60000,
   DB_POOL_IDLE_TIMEOUT: parseInt(process.env.DB_POOL_IDLE_TIMEOUT, 10) || 10000,
+
+  // Prisma-specific configuration
+  PRISMA_LOG_LEVEL: process.env.PRISMA_LOG_LEVEL || getPrismaLogLevel(),
+  PRISMA_QUERY_ENGINE_PROTOCOL: process.env.PRISMA_QUERY_ENGINE_PROTOCOL || 'graphql',
+  PRISMA_BINARY_TARGET: process.env.PRISMA_BINARY_TARGET || undefined,
+
+  // Database SSL configuration (for PostgreSQL in production)
+  DB_SSL_MODE: process.env.DB_SSL_MODE || (NODE_ENV === 'production' ? 'require' : 'prefer'),
+  DB_SSL_CERT: process.env.DB_SSL_CERT || undefined,
+  DB_SSL_KEY: process.env.DB_SSL_KEY || undefined,
+  DB_SSL_CA: process.env.DB_SSL_CA || undefined,
+  DB_SSL_REJECT_UNAUTHORIZED: process.env.DB_SSL_REJECT_UNAUTHORIZED === 'true' || NODE_ENV === 'production',
+
+  // Database performance monitoring
+  DB_SLOW_QUERY_THRESHOLD: parseInt(process.env.DB_SLOW_QUERY_THRESHOLD, 10) || 100, // milliseconds
+  DB_CONNECTION_TIMEOUT: parseInt(process.env.DB_CONNECTION_TIMEOUT, 10) || 10000, // milliseconds
+  DB_STATEMENT_TIMEOUT: parseInt(process.env.DB_STATEMENT_TIMEOUT, 10) || 30000, // milliseconds
 };
 
 function getDatabaseUrl() {
@@ -75,6 +92,18 @@ function generateDefaultSecret(type = 'main') {
   const crypto = require('crypto');
   const base = `cleanstreak-${type}-${NODE_ENV}`;
   return crypto.createHash('sha256').update(base).digest('hex');
+}
+
+function getPrismaLogLevel() {
+  switch (NODE_ENV) {
+    case 'production':
+      return 'warn';
+    case 'test':
+      return 'error';
+    case 'development':
+    default:
+      return 'info';
+  }
 }
 
 // Validation
