@@ -2,6 +2,7 @@ const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
+const cookieParser = require('cookie-parser');
 
 // Load environment configuration
 const config = require('./config/environment');
@@ -32,6 +33,7 @@ app.use(cors(corsOptions));
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -43,9 +45,12 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// API routes will be added here
-// app.use('/api/auth', authRoutes);
-// app.use('/api/user', userRoutes);
+// Import route modules
+const authRoutes = require('./routes/auth');
+
+// API routes
+app.use('/api/auth', authRoutes);
+// app.use('/api/user', userRoutes); // Will be added in Step 10
 
 // Global error handler
 app.use((err, req, res, next) => {
