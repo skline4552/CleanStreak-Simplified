@@ -5,8 +5,9 @@
 
 /**
  * Email validation using RFC 5322 compliant regex
+ * Requires at least one dot in domain (TLD requirement)
  */
-const EMAIL_REGEX = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+const EMAIL_REGEX = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
 
 /**
  * Username validation: alphanumeric, underscores, hyphens, 3-30 characters
@@ -48,6 +49,14 @@ function validateEmail(email) {
   }
 
   if (!EMAIL_REGEX.test(trimmedEmail)) {
+    return {
+      isValid: false,
+      error: 'Invalid email format'
+    };
+  }
+
+  // Additional validation for consecutive dots (not allowed in email addresses)
+  if (trimmedEmail.includes('..')) {
     return {
       isValid: false,
       error: 'Invalid email format'
@@ -288,6 +297,15 @@ function sanitizeString(input) {
 
   return input
     .trim()
+    // Remove dangerous protocols and functions
+    .replace(/javascript:/gi, '')
+    .replace(/vbscript:/gi, '')
+    .replace(/data:text\/html/gi, '')
+    .replace(/data:application\/x-javascript/gi, '')
+    .replace(/eval\s*\(/gi, 'eval_blocked(')
+    .replace(/function\s*\(/gi, 'function_blocked(')
+    .replace(/on\w+\s*=/gi, 'on_event_blocked=')
+    // Sanitize HTML entities
     .replace(/[<>'"&]/g, (match) => {
       const htmlEntities = {
         '<': '&lt;',
