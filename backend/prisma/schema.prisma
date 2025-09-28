@@ -1,6 +1,3 @@
-// Prisma Schema for CleanStreak Authentication System
-// Supports both SQLite (development) and PostgreSQL (production)
-
 generator client {
   provider = "prisma-client-js"
   output   = "../node_modules/.prisma/client"
@@ -11,107 +8,83 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// User model - stores user authentication information
-model User {
-  id                String    @id @default(cuid())
-  email             String    @unique
-  password_hash     String
-  created_at        DateTime  @default(now())
-  updated_at        DateTime  @updatedAt
-  last_login        DateTime?
-  email_verified    Boolean   @default(false)
-  email_verified_at DateTime?
+model analytics {
+  id           String   @id
+  metric_name  String
+  metric_value String
+  date         DateTime @default(now())
+  metadata     String?
 
-  // Relationships
-  streaks     UserStreak[]
-  completions CompletionHistory[]
-  sessions    UserSession[]
-
-  @@index([email])
-  @@index([created_at])
-  @@index([last_login])
-  // Indexes for performance
-  @@map("users")
+  @@index([date])
+  @@index([metric_name, date])
 }
 
-// User Streak model - stores current streak information per user per task
-model UserStreak {
-  id             String    @id @default(cuid())
+model completion_history {
+  id              String   @id
+  user_id         String
+  task_name       String
+  completed_date  DateTime @default(now())
+  streak_day      Int
+  created_at      DateTime @default(now())
+  completion_time String?
+  notes           String?
+  users           users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([task_name])
+  @@index([user_id, task_name])
+  @@index([completed_date])
+  @@index([user_id, completed_date])
+}
+
+model user_sessions {
+  id            String   @id
+  user_id       String
+  refresh_token String   @unique
+  device_info   String?
+  ip_address    String?
+  created_at    DateTime @default(now())
+  last_accessed DateTime @default(now())
+  expires_at    DateTime
+  is_active     Boolean  @default(true)
+  users         users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([is_active])
+  @@index([expires_at])
+  @@index([refresh_token])
+  @@index([user_id])
+}
+
+model user_streaks {
+  id             String    @id
   user_id        String
   task_name      String
   current_streak Int       @default(0)
   best_streak    Int       @default(0)
   last_completed DateTime?
   created_at     DateTime  @default(now())
-  updated_at     DateTime  @updatedAt
+  updated_at     DateTime
+  users          users     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  // Relationships
-  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
-
-  // Constraints and indexes
   @@unique([user_id, task_name])
-  @@index([user_id])
-  @@index([task_name])
   @@index([last_completed])
-  @@map("user_streaks")
-}
-
-// Completion History model - stores all task completions for analytics and history
-model CompletionHistory {
-  id             String   @id @default(cuid())
-  user_id        String
-  task_name      String
-  completed_date DateTime @default(now())
-  streak_day     Int // The day number in the streak when this was completed
-  created_at     DateTime @default(now())
-
-  // Additional metadata (optional for future enhancements)
-  completion_time String? // Time of day when completed (HH:MM format)
-  notes           String? // Optional user notes about the completion
-
-  // Relationships
-  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
-
-  @@index([user_id, completed_date])
-  @@index([completed_date])
-  @@index([user_id, task_name])
   @@index([task_name])
-  // Indexes for performance and analytics
-  @@map("completion_history")
-}
-
-// Session model - for managing user sessions and refresh tokens
-model UserSession {
-  id            String   @id @default(cuid())
-  user_id       String
-  refresh_token String   @unique
-  device_info   String? // Browser/device information
-  ip_address    String?
-  created_at    DateTime @default(now())
-  last_accessed DateTime @default(now())
-  expires_at    DateTime
-  is_active     Boolean  @default(true)
-
-  // Relationships
-  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
-
   @@index([user_id])
-  @@index([refresh_token])
-  @@index([expires_at])
-  @@index([is_active])
-  // Indexes for performance
-  @@map("user_sessions")
 }
 
-// Analytics model - for storing aggregated analytics data
-model Analytics {
-  id           String   @id @default(cuid())
-  metric_name  String
-  metric_value String
-  date         DateTime @default(now())
-  metadata     String? // JSON string for additional data
+model users {
+  id                 String               @id
+  email              String               @unique
+  password_hash      String
+  created_at         DateTime             @default(now())
+  updated_at         DateTime
+  last_login         DateTime?
+  email_verified     Boolean              @default(false)
+  email_verified_at  DateTime?
+  completion_history completion_history[]
+  user_sessions      user_sessions[]
+  user_streaks       user_streaks[]
 
-  @@index([metric_name, date])
-  @@index([date])
-  @@map("analytics")
+  @@index([last_login])
+  @@index([created_at])
+  @@index([email])
 }
