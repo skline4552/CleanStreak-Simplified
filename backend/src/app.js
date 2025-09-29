@@ -42,18 +42,10 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// Health check endpoint (before input validation for simplicity)
-app.get('/api/health', (req, res) => {
-  logger.debug('Health check requested', { requestId: req.requestId });
-
-  res.json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    environment: config.NODE_ENV,
-    port: config.PORT,
-    requestId: req.requestId
-  });
-});
+// Health check routes (before input validation for simplicity)
+// These endpoints should be publicly accessible and not rate-limited
+const healthRoutes = require('./routes/health');
+app.use('/api/health', healthRoutes);
 
 // Input sanitization and security validation (after health endpoint)
 app.use(sanitizeAllInput);
