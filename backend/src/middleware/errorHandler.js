@@ -79,6 +79,15 @@ const analyzeError = (error) => {
     };
   }
 
+  // Handle body-parser JSON errors
+  if (error.type === 'entity.parse.failed' || error.name === 'SyntaxError') {
+    return {
+      statusCode: 400,
+      type: ErrorTypes.BAD_REQUEST,
+      message: 'Invalid JSON in request body'
+    };
+  }
+
   // Handle Prisma database errors
   if (error.code && error.code.startsWith('P')) {
     switch (error.code) {
