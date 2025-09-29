@@ -4,6 +4,14 @@ const cookieParser = require('cookie-parser');
 // Load environment configuration
 const config = require('./config/environment');
 
+// Import logging and error handling
+const { logger, requestLoggingMiddleware } = require('./utils/logger');
+const {
+  errorHandler,
+  notFoundHandler,
+  initializeGlobalErrorHandlers
+} = require('./middleware/errorHandler');
+
 // Import advanced security middleware
 const { initializeSecurity } = require('./middleware/security');
 const {
@@ -19,6 +27,12 @@ const {
 
 const app = express();
 
+// Initialize global error handlers for unhandled promises and exceptions
+initializeGlobalErrorHandlers();
+
+// Initialize request logging middleware (early in the stack)
+app.use(requestLoggingMiddleware);
+
 // Initialize comprehensive security middleware
 // This includes helmet, CORS, security headers, and monitoring
 initializeSecurity(app);
@@ -30,11 +44,14 @@ app.use(cookieParser());
 
 // Health check endpoint (before input validation for simplicity)
 app.get('/api/health', (req, res) => {
+  logger.debug('Health check requested', { requestId: req.requestId });
+
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
     environment: config.NODE_ENV,
-    port: config.PORT
+    port: config.PORT,
+    requestId: req.requestId
   });
 });
 
@@ -64,79 +81,47 @@ app.use('/api/user/account', userLimiters.accountDeletion);
 app.use('/api/user', userLimiters.dataRetrieval);
 app.use('/api/user', userRoutes);
 
-// Global error handler with security event logging
-app.use((err, req, res, next) => {
-  // Log error with request context
-  const errorLog = {
-    requestId: req.requestId || 'unknown',
-    error: err.message,
-    stack: config.NODE_ENV === 'development' ? err.stack : undefined,
-    url: req.url,
-    method: req.method,
-    ip: req.ip || req.connection.remoteAddress,
-    userAgent: req.get('User-Agent'),
-    userId: req.user?.userId,
-    timestamp: new Date().toISOString()
-  };
+// 404 handler for unmatched routes
+app.use('*', notFoundHandler);
 
-  console.error('Application error:', errorLog);
-
-  // Security-focused error response
-  res.status(err.status || 500).json({
-    error: 'Something went wrong!',
-    code: err.code || 'INTERNAL_ERROR',
-    message: config.NODE_ENV === 'development' ? err.message : 'Internal server error',
-    requestId: req.requestId,
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Enhanced 404 handler with logging
-app.use('*', (req, res) => {
-  // Log 404s for security monitoring
-  console.log('404 Not Found:', {
-    requestId: req.requestId || 'unknown',
-    method: req.method,
-    url: req.url,
-    ip: req.ip || req.connection.remoteAddress,
-    userAgent: req.get('User-Agent'),
-    timestamp: new Date().toISOString()
-  });
-
-  res.status(404).json({
-    error: 'Route not found',
-    code: 'ROUTE_NOT_FOUND',
-    path: req.path,
-    method: req.method,
-    timestamp: new Date().toISOString()
-  });
-});
+// Global error handler with comprehensive logging and security
+app.use(errorHandler);
 
 // Start server with enhanced logging
 if (require.main === module) {
   app.listen(config.PORT, config.HOST, () => {
-    console.log('='.repeat(60));
-    console.log('🚀 CleanStreak Backend Server Started');
-    console.log('='.repeat(60));
-    console.log(`📍 Server: http://${config.HOST}:${config.PORT}`);
-    console.log(`🌍 Environment: ${config.NODE_ENV}`);
-    console.log(`💚 Health check: http://${config.HOST}:${config.PORT}/api/health`);
-    console.log(`🔒 CORS origins: ${Array.isArray(config.CORS_ORIGIN) ? config.CORS_ORIGIN.join(', ') : config.CORS_ORIGIN}`);
-    console.log(`🛡️  Security middleware: Active`);
-    console.log(`⚡ Rate limiting: Active`);
-    console.log(`🔍 Request monitoring: Active`);
-    console.log(`🧹 Input sanitization: Active`);
-    console.log('='.repeat(60));
-
-    // Log startup success event
-    console.log('Server startup completed:', {
-      timestamp: new Date().toISOString(),
+    const serverInfo = {
+      server: `http://${config.HOST}:${config.PORT}`,
       environment: config.NODE_ENV,
-      port: config.PORT,
-      host: config.HOST,
-      securityEnabled: true,
-      rateLimitingEnabled: true
-    });
+      healthCheck: `http://${config.HOST}:${config.PORT}/api/health`,
+      corsOrigins: Array.isArray(config.CORS_ORIGIN) ? config.CORS_ORIGIN.join(', ') : config.CORS_ORIGIN,
+      securityMiddleware: 'Active',
+      rateLimiting: 'Active',
+      requestMonitoring: 'Active',
+      inputSanitization: 'Active',
+      errorHandling: 'Active',
+      logging: 'Active'
+    };
+
+    logger.info('CleanStreak Backend Server Started', serverInfo);
+
+    // Pretty console output for development
+    if (config.NODE_ENV === 'development') {
+      console.log('='.repeat(60));
+      console.log('🚀 CleanStreak Backend Server Started');
+      console.log('='.repeat(60));
+      console.log(`📍 Server: ${serverInfo.server}`);
+      console.log(`🌍 Environment: ${serverInfo.environment}`);
+      console.log(`💚 Health check: ${serverInfo.healthCheck}`);
+      console.log(`🔒 CORS origins: ${serverInfo.corsOrigins}`);
+      console.log(`🛡️  Security middleware: ${serverInfo.securityMiddleware}`);
+      console.log(`⚡ Rate limiting: ${serverInfo.rateLimiting}`);
+      console.log(`🔍 Request monitoring: ${serverInfo.requestMonitoring}`);
+      console.log(`🧹 Input sanitization: ${serverInfo.inputSanitization}`);
+      console.log(`❗ Error handling: ${serverInfo.errorHandling}`);
+      console.log(`📝 Comprehensive logging: ${serverInfo.logging}`);
+      console.log('='.repeat(60));
+    }
   });
 }
 
