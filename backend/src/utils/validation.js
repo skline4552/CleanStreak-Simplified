@@ -504,6 +504,41 @@ function isSafeString(input) {
   return !dangerousPatterns.some(pattern => pattern.test(input));
 }
 
+/**
+ * Sanitize object input recursively
+ * @param {*} input - The input to sanitize
+ * @returns {*} Sanitized input
+ */
+function sanitizeInput(input) {
+  if (input === null || input === undefined) {
+    return input;
+  }
+
+  if (typeof input === 'string') {
+    return sanitizeString(input);
+  }
+
+  if (typeof input === 'number' || typeof input === 'boolean') {
+    return input;
+  }
+
+  if (Array.isArray(input)) {
+    return input.map(item => sanitizeInput(item));
+  }
+
+  if (typeof input === 'object') {
+    const sanitized = {};
+    for (const [key, value] of Object.entries(input)) {
+      const sanitizedKey = sanitizeString(key);
+      sanitized[sanitizedKey] = sanitizeInput(value);
+    }
+    return sanitized;
+  }
+
+  // For any other type, convert to string and sanitize
+  return sanitizeString(String(input));
+}
+
 module.exports = {
   validateEmail,
   validateUsername,
@@ -511,6 +546,7 @@ module.exports = {
   validateDate,
   validateStreakCount,
   sanitizeString,
+  sanitizeInput,
   validateRegistrationData,
   validateLoginData,
   validateCompletionData,

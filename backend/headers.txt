@@ -1,0 +1,29 @@
+HTTP/1.1 200 OK
+Content-Security-Policy: default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Resource-Policy: same-origin
+Origin-Agent-Cluster: ?1
+Referrer-Policy: no-referrer
+Strict-Transport-Security: max-age=15552000; includeSubDomains
+X-Content-Type-Options: nosniff
+X-DNS-Prefetch-Control: off
+X-Download-Options: noopen
+X-Frame-Options: SAMEORIGIN
+X-Permitted-Cross-Domain-Policies: none
+X-XSS-Protection: 0
+RateLimit-Policy: 5;w=900
+RateLimit-Limit: 5
+RateLimit-Remaining: 4
+RateLimit-Reset: 900
+Access-Control-Allow-Origin: http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000
+Vary: Origin
+Access-Control-Allow-Credentials: true
+Set-Cookie: accessToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ5YnhxNzNoa2VoNW92Zjg1bmYwdWhwa3oiLCJlbWFpbCI6InRlc3R1c2VyM0BleGFtcGxlLmNvbSIsImp0aSI6IjFhOGUzNWFlLTlmYzAtNDQyNi1iMzYwLTYzOGQ1MDQ4YzRmMiIsInR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3NTkxMDY3MjYsImV4cCI6MTc1OTEwNzYyNiwiaXNzIjoiQ2xlYW5TdHJlYWstQXV0aCJ9.O9eodTyAJ5zxjZ9Ek-CB9-ZwUoNfU6GX47G97S9eHts; Max-Age=900; Path=/; Expires=Mon, 29 Sep 2025 01:00:26 GMT; HttpOnly; SameSite=Lax
+Set-Cookie: refreshToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ5YnhxNzNoa2VoNW92Zjg1bmYwdWhwa3oiLCJqdGkiOiI5ZjgxYzc1MS1hN2Y5LTRhZDMtYmU3MC1lMWY3MDIxNGYyZDAiLCJ0eXBlIjoicmVmcmVzaCIsImlhdCI6MTc1OTEwNjcyNiwiZXhwIjoxNzU5NzExNTI2LCJpc3MiOiJDbGVhblN0cmVhay1BdXRoIn0.WvW9lyl33RwLNxRyiVX9lsfwQd2aVosWtkNwVaafu8o; Max-Age=604800; Path=/; Expires=Mon, 06 Oct 2025 00:45:26 GMT; HttpOnly; SameSite=Lax
+Content-Type: application/json; charset=utf-8
+Content-Length: 310
+ETag: W/"136-j6HFf0e2GhsDQvKwyk807ZHmhlA"
+Date: Mon, 29 Sep 2025 00:45:26 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+

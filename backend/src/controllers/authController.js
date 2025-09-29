@@ -1,10 +1,9 @@
 const bcrypt = require('bcrypt');
-const { PrismaClient } = require('@prisma/client');
+const { createId } = require('@paralleldrive/cuid2');
+const { prisma } = require('../config/prisma');
 const { generateTokenPair, verifyAccessToken, verifyRefreshToken, clearAuthCookies, setAuthCookies } = require('../utils/jwt');
 const { hashPassword, comparePassword, validatePasswordStrength } = require('../utils/password');
 const { validateRegistrationData, validateLoginData, validateEmail, sanitizeString } = require('../utils/validation');
-
-const prisma = new PrismaClient();
 
 class AuthController {
   /**
@@ -13,10 +12,10 @@ class AuthController {
    */
   static async register(req, res) {
     try {
-      const { email, password, username } = req.body;
+      const { email, password, confirmPassword } = req.body;
 
       // Validate input data
-      const validation = validateRegistrationData({ email, password, username });
+      const validation = validateRegistrationData({ email, password, confirmPassword });
       if (!validation.isValid) {
         return res.status(400).json({
           error: 'Validation failed',
@@ -26,10 +25,9 @@ class AuthController {
 
       // Sanitize inputs
       const sanitizedEmail = sanitizeString(email?.toLowerCase());
-      const sanitizedUsername = sanitizeString(username);
 
       // Check if user already exists
-      const existingUser = await prisma.user.findUnique({
+      const existingUser = await prisma.users.findUnique({
         where: { email: sanitizedEmail }
       });
 
@@ -53,12 +51,13 @@ class AuthController {
       const hashedPassword = await hashPassword(password);
 
       // Create user
-      const user = await prisma.user.create({
+      const user = await prisma.users.create({
         data: {
+          id: createId(),
           email: sanitizedEmail,
-          username: sanitizedUsername,
-          password: hashedPassword,
+          password_hash: hashedPassword,
           created_at: new Date(),
+          updated_at: new Date(),
           last_login: new Date()
         }
       });
@@ -66,27 +65,27 @@ class AuthController {
       // Generate JWT tokens
       const tokens = generateTokenPair({
         userId: user.id,
-        email: user.email,
-        username: user.username
+        email: user.email
       });
 
       // Create session record
-      const session = await prisma.userSession.create({
+      const session = await prisma.user_sessions.create({
         data: {
+          id: createId(),
           user_id: user.id,
-          refresh_token: tokens.refreshToken,
+          refresh_token: tokens.refreshToken.token,
           expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
           is_active: true,
-          user_agent: req.get('User-Agent') || 'Unknown',
+          device_info: req.get('User-Agent') || 'Unknown',
           ip_address: req.ip || req.connection.remoteAddress || 'Unknown'
         }
       });
 
       // Set HTTP-only cookies
-      setAuthCookies(res, tokens.accessToken, tokens.refreshToken);
+      setAuthCookies(res, tokens.accessToken.token, tokens.refreshToken.token);
 
       // Return success response (exclude password)
-      const { password: _, ...userResponse } = user;
+      const { password_hash: _, ...userResponse } = user;
 
       res.status(201).json({
         message: 'User registered successfully',
@@ -133,7 +132,7 @@ class AuthController {
       const sanitizedEmail = sanitizeString(email?.toLowerCase());
 
       // Find user
-      const user = await prisma.user.findUnique({
+      const user = await prisma.users.findUnique({
         where: { email: sanitizedEmail }
       });
 
@@ -145,7 +144,7 @@ class AuthController {
       }
 
       // Verify password
-      const isPasswordValid = await comparePassword(password, user.password);
+      const isPasswordValid = await comparePassword(password, user.password_hash);
       if (!isPasswordValid) {
         return res.status(401).json({
           error: 'Authentication failed',
@@ -154,13 +153,16 @@ class AuthController {
       }
 
       // Update last login
-      await prisma.user.update({
+      await prisma.users.update({
         where: { id: user.id },
-        data: { last_login: new Date() }
+        data: {
+          last_login: new Date(),
+          updated_at: new Date()
+        }
       });
 
       // Deactivate existing sessions for this user
-      await prisma.userSession.updateMany({
+      await prisma.user_sessions.updateMany({
         where: {
           user_id: user.id,
           is_active: true
@@ -171,27 +173,27 @@ class AuthController {
       // Generate new JWT tokens
       const tokens = generateTokenPair({
         userId: user.id,
-        email: user.email,
-        username: user.username
+        email: user.email
       });
 
       // Create new session record
-      const session = await prisma.userSession.create({
+      const session = await prisma.user_sessions.create({
         data: {
+          id: createId(),
           user_id: user.id,
-          refresh_token: tokens.refreshToken,
+          refresh_token: tokens.refreshToken.token,
           expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
           is_active: true,
-          user_agent: req.get('User-Agent') || 'Unknown',
+          device_info: req.get('User-Agent') || 'Unknown',
           ip_address: req.ip || req.connection.remoteAddress || 'Unknown'
         }
       });
 
       // Set HTTP-only cookies
-      setAuthCookies(res, tokens.accessToken, tokens.refreshToken);
+      setAuthCookies(res, tokens.accessToken.token, tokens.refreshToken.token);
 
       // Return success response (exclude password)
-      const { password: _, ...userResponse } = user;
+      const { password_hash: _, ...userResponse } = user;
 
       res.status(200).json({
         message: 'Login successful',
@@ -218,7 +220,7 @@ class AuthController {
 
       if (userId) {
         // Deactivate all sessions for this user
-        await prisma.userSession.updateMany({
+        await prisma.user_sessions.updateMany({
           where: {
             user_id: userId,
             is_active: true
@@ -272,7 +274,7 @@ class AuthController {
       }
 
       // Find active session
-      const session = await prisma.userSession.findFirst({
+      const session = await prisma.user_sessions.findFirst({
         where: {
           user_id: decoded.userId,
           refresh_token: refreshToken,
@@ -282,11 +284,10 @@ class AuthController {
           }
         },
         include: {
-          user: {
+          users: {
             select: {
               id: true,
               email: true,
-              username: true,
               created_at: true,
               last_login: true
             }
@@ -304,26 +305,26 @@ class AuthController {
 
       // Generate new token pair
       const tokens = generateTokenPair({
-        userId: session.user.id,
-        email: session.user.email,
-        username: session.user.username
+        userId: session.users.id,
+        email: session.users.email
       });
 
       // Update session with new refresh token
-      await prisma.userSession.update({
+      await prisma.user_sessions.update({
         where: { id: session.id },
         data: {
-          refresh_token: tokens.refreshToken,
-          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+          refresh_token: tokens.refreshToken.token,
+          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+          last_accessed: new Date()
         }
       });
 
       // Set new HTTP-only cookies
-      setAuthCookies(res, tokens.accessToken, tokens.refreshToken);
+      setAuthCookies(res, tokens.accessToken.token, tokens.refreshToken.token);
 
       res.status(200).json({
         message: 'Tokens refreshed successfully',
-        user: session.user
+        user: session.users
       });
 
     } catch (error) {
@@ -345,12 +346,11 @@ class AuthController {
       const { userId } = req.user;
 
       // Get user information
-      const user = await prisma.user.findUnique({
+      const user = await prisma.users.findUnique({
         where: { id: userId },
         select: {
           id: true,
           email: true,
-          username: true,
           created_at: true,
           last_login: true
         }
@@ -364,7 +364,7 @@ class AuthController {
       }
 
       // Get active session info
-      const activeSession = await prisma.userSession.findFirst({
+      const activeSession = await prisma.user_sessions.findFirst({
         where: {
           user_id: userId,
           is_active: true,
@@ -376,7 +376,7 @@ class AuthController {
           id: true,
           created_at: true,
           expires_at: true,
-          user_agent: true
+          device_info: true
         },
         orderBy: {
           created_at: 'desc'
