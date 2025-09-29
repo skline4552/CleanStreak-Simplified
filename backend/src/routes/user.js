@@ -67,6 +67,30 @@ router.get('/stats', userController.getStats);
 router.get('/profile', userController.getProfile);
 
 /**
+ * Account Management Routes
+ */
+
+// Get account summary and data storage information
+// GET /api/user/account
+router.get('/account', userController.getAccountSummary);
+
+// Export user data in JSON format
+// GET /api/user/export
+// Rate limited for security
+router.get('/export',
+  authRateLimit({ type: 'general', max: 5, windowMs: 60 * 60 * 1000 }), // 5 per hour
+  userController.exportData
+);
+
+// Delete user account and all associated data
+// DELETE /api/user/account
+// Very restrictive rate limiting for security
+router.delete('/account',
+  authRateLimit({ type: 'general', max: 2, windowMs: 60 * 60 * 1000 }), // 2 per hour
+  userController.deleteAccount
+);
+
+/**
  * Data Management Routes
  */
 
@@ -167,6 +191,34 @@ router.get('/routes', (req, res) => {
       path: '/api/user/profile',
       description: 'Get user profile information',
       authentication: 'required'
+    },
+    {
+      method: 'GET',
+      path: '/api/user/account',
+      description: 'Get account summary and data storage information',
+      authentication: 'required'
+    },
+    {
+      method: 'GET',
+      path: '/api/user/export',
+      description: 'Export user data in JSON format',
+      authentication: 'required',
+      rateLimit: '5 requests per hour',
+      responseHeaders: {
+        'Content-Disposition': 'attachment; filename with user ID and date'
+      }
+    },
+    {
+      method: 'DELETE',
+      path: '/api/user/account',
+      description: 'Delete user account and all associated data',
+      authentication: 'required',
+      rateLimit: '2 requests per hour',
+      body: {
+        email: 'string (required - must match account email)',
+        confirmation: 'string (required - must be exactly "DELETE MY ACCOUNT")'
+      },
+      warning: 'This action is irreversible and will delete all user data'
     },
     {
       method: 'DELETE',

@@ -1,5 +1,6 @@
 const StreakService = require('../services/streakService');
-const { validateTaskName, sanitizeString } = require('../utils/validation');
+const AccountService = require('../services/accountService');
+const { validateTaskName, sanitizeString, validateEmail } = require('../utils/validation');
 
 /**
  * User Controller
@@ -11,6 +12,7 @@ const { validateTaskName, sanitizeString } = require('../utils/validation');
 class UserController {
   constructor() {
     this.streakService = new StreakService();
+    this.accountService = new AccountService();
 
     // Bind methods to preserve 'this' context
     this.getStreaks = this.getStreaks.bind(this);
@@ -21,6 +23,9 @@ class UserController {
     this.deleteCompletion = this.deleteCompletion.bind(this);
     this.getProfile = this.getProfile.bind(this);
     this.bulkCompleteTask = this.bulkCompleteTask.bind(this);
+    this.getAccountSummary = this.getAccountSummary.bind(this);
+    this.exportData = this.exportData.bind(this);
+    this.deleteAccount = this.deleteAccount.bind(this);
   }
 
   /**
@@ -445,6 +450,155 @@ class UserController {
         error: 'Internal server error',
         code: 'BULK_COMPLETION_ERROR',
         message: 'Failed to complete bulk tasks'
+      });
+    }
+  }
+
+  /**
+   * Get account summary and data storage information
+   * GET /api/user/account
+   */
+  async getAccountSummary(req, res) {
+    try {
+      const userId = req.user.userId;
+      const summary = await this.accountService.getAccountSummary(userId);
+
+      res.status(200).json({
+        success: true,
+        data: summary,
+        message: 'Account summary retrieved successfully'
+      });
+    } catch (error) {
+      console.error('Error in getAccountSummary:', error);
+      res.status(500).json({
+        error: 'Internal server error',
+        code: 'ACCOUNT_SUMMARY_ERROR',
+        message: 'Failed to retrieve account summary'
+      });
+    }
+  }
+
+  /**
+   * Export user data in JSON format
+   * GET /api/user/export
+   */
+  async exportData(req, res) {
+    try {
+      const userId = req.user.userId;
+      const exportData = await this.accountService.exportUserData(userId);
+
+      // Set appropriate headers for file download
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="cleanstreak-data-export-${userId}-${new Date().toISOString().split('T')[0]}.json"`);
+
+      res.status(200).json(exportData);
+    } catch (error) {
+      console.error('Error in exportData:', error);
+
+      if (error.message.includes('User not found')) {
+        return res.status(404).json({
+          error: 'Not found',
+          code: 'USER_NOT_FOUND',
+          message: 'User account not found'
+        });
+      }
+
+      res.status(500).json({
+        error: 'Internal server error',
+        code: 'DATA_EXPORT_ERROR',
+        message: 'Failed to export user data'
+      });
+    }
+  }
+
+  /**
+   * Delete user account and all associated data
+   * DELETE /api/user/account
+   */
+  async deleteAccount(req, res) {
+    try {
+      const userId = req.user.userId;
+      const userEmail = req.user.email;
+      const { email: confirmationEmail, confirmation } = req.body;
+
+      // Validate confirmation
+      if (confirmation !== 'DELETE MY ACCOUNT') {
+        return res.status(400).json({
+          error: 'Bad request',
+          code: 'INVALID_CONFIRMATION',
+          message: 'Invalid confirmation phrase. Type exactly: DELETE MY ACCOUNT'
+        });
+      }
+
+      // Validate email confirmation
+      if (!confirmationEmail) {
+        return res.status(400).json({
+          error: 'Bad request',
+          code: 'MISSING_EMAIL_CONFIRMATION',
+          message: 'Email confirmation is required'
+        });
+      }
+
+      if (!validateEmail(confirmationEmail)) {
+        return res.status(400).json({
+          error: 'Bad request',
+          code: 'INVALID_EMAIL_FORMAT',
+          message: 'Invalid email format'
+        });
+      }
+
+      if (confirmationEmail.toLowerCase() !== userEmail.toLowerCase()) {
+        return res.status(400).json({
+          error: 'Bad request',
+          code: 'EMAIL_MISMATCH',
+          message: 'Email confirmation does not match account email'
+        });
+      }
+
+      // Perform account deletion
+      const result = await this.accountService.deleteUserAccount(userId, userEmail);
+
+      // Clear authentication cookies
+      res.clearCookie('accessToken', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict'
+      });
+
+      res.clearCookie('refreshToken', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict'
+      });
+
+      res.status(200).json({
+        success: true,
+        data: result,
+        message: 'Account deleted successfully'
+      });
+    } catch (error) {
+      console.error('Error in deleteAccount:', error);
+
+      if (error.message.includes('User not found')) {
+        return res.status(404).json({
+          error: 'Not found',
+          code: 'USER_NOT_FOUND',
+          message: 'User account not found'
+        });
+      }
+
+      if (error.message.includes('Email verification failed')) {
+        return res.status(400).json({
+          error: 'Bad request',
+          code: 'EMAIL_VERIFICATION_FAILED',
+          message: 'Email verification failed'
+        });
+      }
+
+      res.status(500).json({
+        error: 'Internal server error',
+        code: 'ACCOUNT_DELETE_ERROR',
+        message: 'Failed to delete account'
       });
     }
   }
