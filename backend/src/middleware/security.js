@@ -188,11 +188,21 @@ const requestMonitor = (req, res, next) => {
   res.send = function(data) {
     const responseTime = Date.now() - startTime;
 
+    // Calculate response size - handle both strings and objects
+    let responseSize = 0;
+    if (data) {
+      if (typeof data === 'string' || Buffer.isBuffer(data)) {
+        responseSize = Buffer.byteLength(data);
+      } else if (typeof data === 'object') {
+        responseSize = Buffer.byteLength(JSON.stringify(data));
+      }
+    }
+
     console.log('Request completed:', {
       requestId,
       statusCode: res.statusCode,
       responseTime: `${responseTime}ms`,
-      responseSize: data ? Buffer.byteLength(data) : 0
+      responseSize
     });
 
     // Log slow requests

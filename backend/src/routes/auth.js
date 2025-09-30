@@ -1,53 +1,12 @@
 const express = require('express');
-const rateLimit = require('express-rate-limit');
 const AuthController = require('../controllers/authController');
 const { authenticate, optionalAuth } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Rate limiting for authentication endpoints
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Limit each IP to 5 requests per windowMs for auth endpoints
-  message: {
-    error: 'Too many authentication attempts',
-    message: 'Please try again later',
-    retryAfter: 15 * 60 // 15 minutes in seconds
-  },
-  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-  keyGenerator: (req) => {
-    // Use combination of IP and email (if provided) for more granular limiting
-    const email = req.body?.email || 'unknown';
-    return `${req.ip}-${email}`;
-  }
-});
-
-// More restrictive rate limiting for registration
-const registerLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 3, // Limit each IP to 3 registration attempts per hour
-  message: {
-    error: 'Too many registration attempts',
-    message: 'Please try again in one hour',
-    retryAfter: 60 * 60 // 1 hour in seconds
-  },
-  standardHeaders: true,
-  legacyHeaders: false
-});
-
-// General rate limiting for other auth endpoints
-const generalAuthLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // Allow more attempts for non-sensitive operations
-  message: {
-    error: 'Too many requests',
-    message: 'Please try again later',
-    retryAfter: 15 * 60
-  },
-  standardHeaders: true,
-  legacyHeaders: false
-});
+// Note: Rate limiting is now handled at the app level in app.js
+// This eliminates duplicate rate limiters and ensures test environment
+// detection works correctly with our wrapped createRateLimiter function
 
 /**
  * @route   POST /api/auth/register
@@ -55,7 +14,7 @@ const generalAuthLimiter = rateLimit({
  * @access  Public
  * @body    { email, password, username }
  */
-router.post('/register', registerLimiter, authLimiter, AuthController.register);
+router.post('/register', AuthController.register);
 
 /**
  * @route   POST /api/auth/login
@@ -63,7 +22,7 @@ router.post('/register', registerLimiter, authLimiter, AuthController.register);
  * @access  Public
  * @body    { email, password }
  */
-router.post('/login', authLimiter, AuthController.login);
+router.post('/login', AuthController.login);
 
 /**
  * @route   POST /api/auth/logout
@@ -77,7 +36,7 @@ router.post('/logout', optionalAuth, AuthController.logout);
  * @desc    Refresh JWT tokens using refresh token
  * @access  Public (but requires valid refresh token)
  */
-router.post('/refresh', generalAuthLimiter, AuthController.refresh);
+router.post('/refresh', AuthController.refresh);
 
 /**
  * @route   GET /api/auth/me
