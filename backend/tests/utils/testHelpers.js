@@ -121,21 +121,22 @@ async function createAuthenticatedUser(userData = {}) {
  */
 async function createTestStreak(userId, streakData = {}) {
   const defaultData = {
+    task_name: 'default-task',
     current_streak: 5,
-    longest_streak: 10,
-    total_completions: 25,
-    last_completed_date: new Date().toISOString().split('T')[0]
+    best_streak: 10,
+    last_completed: new Date()
   };
 
   const data = { ...defaultData, ...streakData };
 
   const streak = await prisma.user_streaks.create({
     data: {
+      id: createId(),
       user_id: userId,
+      task_name: data.task_name,
       current_streak: data.current_streak,
-      longest_streak: data.longest_streak,
-      total_completions: data.total_completions,
-      last_completed_date: data.last_completed_date,
+      best_streak: data.best_streak,
+      last_completed: data.last_completed,
       created_at: new Date(),
       updated_at: new Date()
     }
@@ -152,9 +153,11 @@ async function createTestStreak(userId, streakData = {}) {
  */
 async function createTestCompletions(userId, completions = []) {
   const defaultCompletion = {
-    task_completed: 'Test cleaning task',
-    completion_date: new Date().toISOString().split('T')[0],
-    completed_at: new Date()
+    task_name: 'Test cleaning task',
+    completed_date: new Date(),
+    streak_day: 1,
+    completion_time: null,
+    notes: null
   };
 
   const createdCompletions = [];
@@ -163,10 +166,14 @@ async function createTestCompletions(userId, completions = []) {
     const data = { ...defaultCompletion, ...completion };
     const created = await prisma.completion_history.create({
       data: {
+        id: createId(),
         user_id: userId,
-        task_completed: data.task_completed,
-        completion_date: data.completion_date,
-        completed_at: data.completed_at
+        task_name: data.task_name,
+        completed_date: data.completed_date,
+        streak_day: data.streak_day,
+        created_at: new Date(),
+        completion_time: data.completion_time,
+        notes: data.notes
       }
     });
     createdCompletions.push(created);
