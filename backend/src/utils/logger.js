@@ -294,9 +294,15 @@ class Logger {
 
     // Sanitize data
     const sanitizedData = sanitizeLogData(data);
-    const processedData = typeof sanitizedData === 'string'
-      ? JSON.parse(sanitizedData)
-      : sanitizedData;
+    let processedData;
+    try {
+      processedData = typeof sanitizedData === 'string'
+        ? JSON.parse(sanitizedData)
+        : sanitizedData;
+    } catch (e) {
+      // If JSON.parse fails, use sanitized data as-is
+      processedData = sanitizedData;
+    }
 
     // Add request context if available
     if (data.requestId && this.config.requestId) {

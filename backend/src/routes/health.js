@@ -131,7 +131,7 @@ router.get('/', async (req, res) => {
 
     // Determine overall health status
     const isHealthy = dbHealth.connected;
-    const overallStatus = isHealthy ? 'healthy' : 'degraded';
+    const overallStatus = isHealthy ? 'ok' : 'degraded';
     const statusCode = isHealthy ? 200 : 503;
 
     const responseTime = Date.now() - startTime;

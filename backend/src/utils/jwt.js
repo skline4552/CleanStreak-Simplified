@@ -298,8 +298,12 @@ function clearAuthCookies(res) {
   try {
     const cookieOptions = generateCookieOptions();
 
-    res.clearCookie('accessToken', cookieOptions);
-    res.clearCookie('refreshToken', cookieOptions);
+    // Remove maxAge to avoid Express deprecation warning
+    // clearCookie automatically expires cookies immediately in Express 4.x and 5.x
+    const { maxAge, ...clearOptions } = cookieOptions;
+
+    res.clearCookie('accessToken', clearOptions);
+    res.clearCookie('refreshToken', clearOptions);
   } catch (error) {
     throw new Error(`Failed to clear auth cookies: ${error.message}`);
   }
