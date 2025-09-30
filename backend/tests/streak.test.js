@@ -137,7 +137,7 @@ describe('Streak Management Integration Tests', () => {
           taskName: 'Clean bathroom',
           completionDate: getISODate()
         })
-        .expect(200);
+        .expect(201);
 
       expect(response.body).toHaveProperty('success', true);
       expect(response.body).toHaveProperty('streak');
@@ -165,7 +165,7 @@ describe('Streak Management Integration Tests', () => {
           taskName: 'First task',
           completionDate: getISODate()
         })
-        .expect(200);
+        .expect(201);
 
       expect(response.body.streak.current_streak).toBeGreaterThanOrEqual(1);
 
@@ -195,7 +195,7 @@ describe('Streak Management Integration Tests', () => {
           taskName: 'Resume task',
           completionDate: getISODate()
         })
-        .expect(200);
+        .expect(201);
 
       expect(response.body).toHaveProperty('success', true);
       // Streak should reset to 1
@@ -214,7 +214,7 @@ describe('Streak Management Integration Tests', () => {
           taskName: 'Daily task',
           completionDate: today
         })
-        .expect(200);
+        .expect(201);
 
       // Second completion on same day
       const response = await request(app)
@@ -284,7 +284,7 @@ describe('Streak Management Integration Tests', () => {
         .post('/api/user/bulk-complete')
         .set(getAuthHeader(accessToken))
         .send({ tasks })
-        .expect(200);
+        .expect(201);
 
       expect(response.body).toHaveProperty('success', true);
       expect(response.body).toHaveProperty('completed');
@@ -368,7 +368,7 @@ describe('Streak Management Integration Tests', () => {
           taskName: 'Extend streak',
           completionDate: getISODate()
         })
-        .expect(200);
+        .expect(201);
 
       // Verify longest streak was updated
       const streak = await prisma.user_streaks.findFirst({
@@ -394,7 +394,7 @@ describe('Streak Management Integration Tests', () => {
           taskName: 'New completion',
           completionDate: getISODate()
         })
-        .expect(200);
+        .expect(201);
 
       const streak = await prisma.user_streaks.findFirst({
         where: { user_id: testData.user.id }
@@ -422,7 +422,7 @@ describe('Streak Management Integration Tests', () => {
           taskName: 'End of day task',
           completionDate: endOfDay.toISOString().split('T')[0]
         })
-        .expect(200);
+        .expect(201);
 
       expect(response.body).toHaveProperty('success', true);
     });
@@ -496,7 +496,7 @@ describe('Streak Management Integration Tests', () => {
           taskName: 'Integrity test',
           completionDate: getISODate()
         })
-        .expect(200);
+        .expect(201);
 
       // Verify completion references valid user
       const completion = await prisma.completion_history.findFirst({
@@ -544,7 +544,7 @@ describe('Streak Management Integration Tests', () => {
           taskName: 'Performance test',
           completionDate: getISODate()
         })
-        .expect(200);
+        .expect(201);
       const duration = Date.now() - startTime;
 
       expect(duration).toBeLessThan(1000);
