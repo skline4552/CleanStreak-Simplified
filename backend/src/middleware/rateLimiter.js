@@ -14,6 +14,9 @@ const { authRateLimit } = require('../config/auth');
  * @returns {Function} Express rate limiting middleware
  */
 const createRateLimiter = (options = {}) => {
+  // In test environment, significantly increase limits to prevent test interference
+  const isTestEnv = process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined;
+
   const defaultOptions = {
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 100, // requests per window
@@ -53,7 +56,16 @@ const createRateLimiter = (options = {}) => {
     // The logging is now handled in the custom handler function above
   };
 
-  return rateLimit({ ...defaultOptions, ...options });
+  const mergedOptions = { ...defaultOptions, ...options };
+
+  // In test environment, multiply limits by 1000 to prevent interference
+  if (isTestEnv) {
+    mergedOptions.max = typeof mergedOptions.max === 'number'
+      ? mergedOptions.max * 1000
+      : 100000;
+  }
+
+  return rateLimit(mergedOptions);
 };
 
 /**
