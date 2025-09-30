@@ -58,12 +58,12 @@ const getLogConfig = () => {
       maxFiles: 5
     },
     test: {
-      level: LOG_LEVELS.error,
-      console: false,
+      level: LOG_LEVELS.debug,  // Allow all log levels in tests
+      console: true,  // Enable console for test assertions
       file: false,
       colors: false,
       timestamp: true,
-      requestId: false,
+      requestId: true,
       pretty: false
     }
   };

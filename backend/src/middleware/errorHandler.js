@@ -54,8 +54,10 @@ const createErrorResponse = (error, req) => {
 
   // Add additional details in development mode
   if (isDevelopment) {
-    errorResponse.error.stack = error.stack;
-    errorResponse.error.details = error.details;
+    // Always include stack and details properties in development
+    // Use null instead of undefined to ensure they appear in JSON
+    errorResponse.error.stack = error.stack || null;
+    errorResponse.error.details = error.details || null;
   }
 
   // Add validation errors if present
