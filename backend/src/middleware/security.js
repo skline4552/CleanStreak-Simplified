@@ -299,31 +299,37 @@ const validateContentType = (req, res, next) => {
   // Only validate POST, PUT, PATCH requests
   if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
     const contentType = req.get('Content-Type');
+    const contentLength = parseInt(req.get('Content-Length'), 10) || 0;
+    const hasBody = contentLength > 0 || (req.body && Object.keys(req.body).length > 0);
 
-    if (!contentType) {
+    // Only require Content-Type if there's actually a body
+    if (!contentType && hasBody) {
       return res.status(400).json({
         error: 'Content-Type header is required',
         code: 'MISSING_CONTENT_TYPE'
       });
     }
 
-    // Allow JSON and form data
-    const allowedTypes = [
-      'application/json',
-      'application/x-www-form-urlencoded',
-      'multipart/form-data'
-    ];
+    // If Content-Type is provided, validate it
+    if (contentType) {
+      // Allow JSON and form data
+      const allowedTypes = [
+        'application/json',
+        'application/x-www-form-urlencoded',
+        'multipart/form-data'
+      ];
 
-    const isValidType = allowedTypes.some(type =>
-      contentType.toLowerCase().includes(type)
-    );
+      const isValidType = allowedTypes.some(type =>
+        contentType.toLowerCase().includes(type)
+      );
 
-    if (!isValidType) {
-      return res.status(415).json({
-        error: 'Unsupported content type',
-        code: 'UNSUPPORTED_MEDIA_TYPE',
-        supportedTypes: allowedTypes
-      });
+      if (!isValidType) {
+        return res.status(415).json({
+          error: 'Unsupported content type',
+          code: 'UNSUPPORTED_MEDIA_TYPE',
+          supportedTypes: allowedTypes
+        });
+      }
     }
   }
 
