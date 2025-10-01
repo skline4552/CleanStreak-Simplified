@@ -116,7 +116,7 @@ describe('Performance Testing Suite', () => {
           taskName: 'Performance test task',
           completionDate: getISODate()
         })
-        .expect(200);
+        .expect(201); // POST creates a new resource, returns 201
       const duration = Date.now() - startTime;
 
       expect(duration).toBeLessThan(300);
@@ -221,9 +221,9 @@ describe('Performance Testing Suite', () => {
       const responses = await Promise.all(requests);
       const duration = Date.now() - startTime;
 
-      // Should handle concurrency gracefully
+      // Should handle concurrency gracefully (201 for created, 200/429/500 for other cases)
       responses.forEach(response => {
-        expect([200, 429, 500]).toContain(response.status);
+        expect([200, 201, 429, 500]).toContain(response.status);
       });
 
       expect(duration).toBeLessThan(3000);
@@ -263,7 +263,7 @@ describe('Performance Testing Suite', () => {
       const history = await prisma.completion_history.findMany({
         where: { user_id: testData.user.id },
         take: 20,
-        orderBy: { completion_date: 'desc' }
+        orderBy: { completed_date: 'desc' } // Fixed: completed_date not completion_date
       });
       const duration = Date.now() - startTime;
 
@@ -296,10 +296,16 @@ describe('Performance Testing Suite', () => {
 
       const startTime = Date.now();
       await prisma.user_streaks.update({
-        where: { user_id: testData.user.id },
+        where: {
+          // Use compound unique constraint: user_id AND task_name
+          user_id_task_name: {
+            user_id: testData.user.id,
+            task_name: testData.streak.task_name
+          }
+        },
         data: {
           current_streak: 6,
-          last_completed_date: getISODate(),
+          last_completed: new Date(getISODate()), // Fixed: last_completed not last_completed_date
           updated_at: new Date()
         }
       });
@@ -327,7 +333,8 @@ describe('Performance Testing Suite', () => {
         .expect(200);
       const duration = Date.now() - startTime;
 
-      expect(response.body.pagination.total).toBe(100);
+      // Response is {success, data: {completions, pagination}, message}
+      expect(response.body.data.pagination.total).toBe(100);
       expect(duration).toBeLessThan(500);
     });
 
@@ -349,7 +356,8 @@ describe('Performance Testing Suite', () => {
         const duration = Date.now() - startTime;
 
         expect(duration).toBeLessThan(500);
-        expect(response.body.history.length).toBeLessThanOrEqual(50);
+        // Response is {success, data: {completions, pagination}, message}
+        expect(response.body.data.completions.length).toBeLessThanOrEqual(50);
 
         // Small delay to avoid rate limiting
         await wait(100);
