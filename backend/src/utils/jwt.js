@@ -259,7 +259,7 @@ function generateCookieOptions(options = {}) {
     ...options,
     httpOnly: true, // Always enforce httpOnly for security
     secure: process.env.NODE_ENV === 'production', // Always use secure in production
-    sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax'
+    sameSite: 'strict' // Always use strict for security
   };
 }
 

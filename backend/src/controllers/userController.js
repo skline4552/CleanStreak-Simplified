@@ -349,15 +349,11 @@ class UserController {
       const stats = await this.streakService.getStreakStats(userId);
 
       res.status(200).json({
-        success: true,
-        data: {
-          user: {
-            id: userId,
-            email: email
-          },
-          stats
+        user: {
+          id: userId,
+          email: email
         },
-        message: 'Profile retrieved successfully'
+        stats
       });
     } catch (error) {
       console.error('Error in getProfile:', error);

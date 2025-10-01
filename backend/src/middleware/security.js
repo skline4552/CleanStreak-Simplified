@@ -107,7 +107,8 @@ const getCorsConfig = () => {
           allowedOrigins
         });
 
-        callback(new Error('CORS policy violation'), false);
+        // Deny access without throwing an error (prevents 500, returns proper CORS rejection)
+        callback(null, false);
       }
     },
     credentials: config.CORS_CREDENTIALS,

@@ -28,7 +28,7 @@ const config = {
   COOKIE_SAME_SITE: process.env.COOKIE_SAME_SITE || (NODE_ENV === 'production' ? 'strict' : 'lax'),
 
   // CORS configuration
-  CORS_ORIGIN: process.env.CORS_ORIGIN || getCorsOrigin(),
+  CORS_ORIGIN: getCorsOrigin(),
   CORS_CREDENTIALS: process.env.CORS_CREDENTIALS === 'true' || true,
 
   // Rate limiting
@@ -76,8 +76,14 @@ function getDatabaseUrl() {
 }
 
 function getCorsOrigin() {
+  // If CORS_ORIGIN is set in environment, split by commas
+  if (process.env.CORS_ORIGIN) {
+    return process.env.CORS_ORIGIN.split(',').map(origin => origin.trim());
+  }
+
+  // Default values based on environment
   if (NODE_ENV === 'production') {
-    return process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : ['https://cleanstreak.com'];
+    return ['https://cleanstreak.com'];
   } else {
     return ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000'];
   }

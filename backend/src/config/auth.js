@@ -20,7 +20,7 @@ const jwtConfig = {
   cookieOptions: {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+    sameSite: 'strict', // Always use strict for security
     maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days in milliseconds
   }
 };

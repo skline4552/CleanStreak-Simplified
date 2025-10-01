@@ -363,15 +363,19 @@ describe('Security Testing Suite', () => {
     });
 
     test('should require current password for sensitive operations', async () => {
-      const { accessToken } = await createAuthenticatedUser();
+      const { accessToken, user } = await createAuthenticatedUser();
 
-      // Account deletion is a sensitive operation
+      // Account deletion is a sensitive operation and requires confirmation
       const response = await request(app)
         .delete('/api/user/account')
         .set(getAuthHeader(accessToken))
+        .send({
+          email: user.email,
+          confirmation: 'DELETE MY ACCOUNT'
+        })
         .expect(200);
 
-      // Should complete but in production might require password confirmation
+      // Should complete with proper confirmation
       expect(response.body).toHaveProperty('message');
     });
 
@@ -459,13 +463,17 @@ describe('Security Testing Suite', () => {
       const user1 = await createAuthenticatedUser();
       const user2 = await createAuthenticatedUser();
 
-      // User 1 should not be able to delete user 2's data
+      // User 1 deletes their own account (with proper confirmation)
       const response = await request(app)
         .delete('/api/user/account')
         .set(getAuthHeader(user1.accessToken))
+        .send({
+          email: user1.user.email,
+          confirmation: 'DELETE MY ACCOUNT'
+        })
         .expect(200);
 
-      // Verify only user 1's account was deleted
+      // Verify only user 1's account was deleted (authorization prevents deleting user 2)
       const user1Check = await prisma.users.findUnique({
         where: { id: user1.user.id }
       });
