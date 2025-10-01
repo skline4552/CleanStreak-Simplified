@@ -31,6 +31,75 @@
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
         }
 
+        /* User Header Styles */
+        .user-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f1f3f5;
+        }
+
+        .user-status {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background: #e9ecef;
+            color: #495057;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border-radius: 12px;
+        }
+
+        .status-badge.authenticated {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .user-email {
+            font-size: 0.8rem;
+            color: #6c757d;
+            font-weight: 500;
+        }
+
+        .user-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .header-button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .header-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .header-button.secondary {
+            background: #6c757d;
+        }
+
+        .header-button.secondary:hover {
+            background: #5a6268;
+            box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+        }
+
         h1 {
             color: #333;
             margin-bottom: 30px;
@@ -125,11 +194,252 @@
             .task-text {
                 font-size: 1.1rem;
             }
+
+            .user-header {
+                flex-direction: column;
+                gap: 12px;
+                align-items: stretch;
+            }
+
+            .user-status {
+                align-items: center;
+            }
+
+            .user-actions {
+                justify-content: center;
+            }
+
+            .header-button {
+                flex: 1;
+            }
+        }
+
+        /* Authentication Modal Styles */
+        #authOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        #authModal {
+            background: white;
+            border-radius: 20px;
+            max-width: 420px;
+            width: 100%;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+            animation: slideUp 0.3s ease;
+            position: relative;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .auth-form {
+            padding: 40px 35px;
+        }
+
+        .auth-form h2 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.8rem;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .auth-subtitle {
+            color: #6c757d;
+            font-size: 0.95rem;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            color: #495057;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group input::placeholder {
+            color: #adb5bd;
+        }
+
+        .form-hint {
+            display: block;
+            color: #6c757d;
+            font-size: 0.8rem;
+            margin-top: 6px;
+        }
+
+        .form-error {
+            background: #fff5f5;
+            color: #e53e3e;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+            display: none;
+            border: 1px solid #feb2b2;
+        }
+
+        .form-error.show {
+            display: block;
+        }
+
+        .auth-button {
+            width: 100%;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 16px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .auth-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .auth-button:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .auth-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .button-loading {
+            display: none;
+        }
+
+        .auth-button.loading .button-text {
+            display: none;
+        }
+
+        .auth-button.loading .button-loading {
+            display: inline;
+        }
+
+        .auth-footer {
+            text-align: center;
+            margin-top: 25px;
+            color: #6c757d;
+            font-size: 0.95rem;
+        }
+
+        .auth-footer a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .auth-footer a:hover {
+            text-decoration: underline;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: transparent;
+            border: none;
+            font-size: 2rem;
+            color: #adb5bd;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+        }
+
+        .close-modal:hover {
+            background: #f8f9fa;
+            color: #495057;
+        }
+
+        @media (max-width: 480px) {
+            .auth-form {
+                padding: 35px 25px;
+            }
+
+            .auth-form h2 {
+                font-size: 1.6rem;
+            }
+
+            #authOverlay {
+                padding: 15px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
+        <!-- User Header -->
+        <div class="user-header">
+            <div class="user-status" id="userStatus">
+                <span class="status-badge" id="statusBadge">Guest</span>
+                <span class="user-email" id="userEmail" style="display: none;"></span>
+            </div>
+            <div class="user-actions">
+                <button class="header-button" id="loginButton">Sign In</button>
+                <button class="header-button secondary" id="logoutButton" style="display: none;">Sign Out</button>
+            </div>
+        </div>
+
         <h1>Daily Clean</h1>
 
         <div class="task-card">
@@ -146,6 +456,79 @@
 
         <div class="completed-message" id="completedMessage">
             Already completed today! Come back tomorrow for your next task.
+        </div>
+    </div>
+
+    <!-- Authentication Modal Overlay -->
+    <div id="authOverlay" style="display: none;">
+        <div id="authModal">
+            <!-- Login Form -->
+            <div id="loginForm" class="auth-form">
+                <h2>Welcome Back!</h2>
+                <p class="auth-subtitle">Sign in to sync your streak across devices</p>
+
+                <form id="loginFormElement">
+                    <div class="form-group">
+                        <label for="loginEmail">Email</label>
+                        <input type="email" id="loginEmail" name="email" required autocomplete="email" placeholder="you@example.com">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="loginPassword">Password</label>
+                        <input type="password" id="loginPassword" name="password" required autocomplete="current-password" placeholder="Enter your password">
+                    </div>
+
+                    <div class="form-error" id="loginError"></div>
+
+                    <button type="submit" class="auth-button" id="loginSubmitButton">
+                        <span class="button-text">Sign In</span>
+                        <span class="button-loading" style="display: none;">Signing in...</span>
+                    </button>
+                </form>
+
+                <div class="auth-footer">
+                    <p>Don't have an account? <a href="#" id="showRegisterLink">Create one</a></p>
+                </div>
+
+                <button class="close-modal" id="closeLoginModal" aria-label="Close">&times;</button>
+            </div>
+
+            <!-- Register Form -->
+            <div id="registerForm" class="auth-form" style="display: none;">
+                <h2>Create Account</h2>
+                <p class="auth-subtitle">Start syncing your cleaning streak today</p>
+
+                <form id="registerFormElement">
+                    <div class="form-group">
+                        <label for="registerEmail">Email</label>
+                        <input type="email" id="registerEmail" name="email" required autocomplete="email" placeholder="you@example.com">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="registerPassword">Password</label>
+                        <input type="password" id="registerPassword" name="password" required autocomplete="new-password" placeholder="At least 8 characters">
+                        <small class="form-hint">Use 8+ characters with letters, numbers, and symbols</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="registerConfirmPassword">Confirm Password</label>
+                        <input type="password" id="registerConfirmPassword" name="confirmPassword" required autocomplete="new-password" placeholder="Confirm your password">
+                    </div>
+
+                    <div class="form-error" id="registerError"></div>
+
+                    <button type="submit" class="auth-button" id="registerSubmitButton">
+                        <span class="button-text">Create Account</span>
+                        <span class="button-loading" style="display: none;">Creating account...</span>
+                    </button>
+                </form>
+
+                <div class="auth-footer">
+                    <p>Already have an account? <a href="#" id="showLoginLink">Sign in</a></p>
+                </div>
+
+                <button class="close-modal" id="closeRegisterModal" aria-label="Close">&times;</button>
+            </div>
         </div>
     </div>
 
