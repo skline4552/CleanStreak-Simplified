@@ -533,6 +533,12 @@
     </div>
 
     <script>
+        // ============================================
+        // CONSTANTS AND CONFIGURATION
+        // ============================================
+        const API_BASE_URL = 'http://localhost:3000/api';
+        const API_TIMEOUT = 10000; // 10 seconds
+
         const cleaningTasks = [
             "Make your bed",
             "Wipe down kitchen counters",
@@ -586,8 +592,680 @@
             "Clean out car cup holders"
         ];
 
-        let currentStreak = 0;
-        let lastCompletedDate = null;
+        // ============================================
+        // API COMMUNICATION LAYER (Step 25)
+        // ============================================
+
+        /**
+         * Make an authenticated API request with error handling
+         * @param {string} endpoint - API endpoint path (e.g., '/auth/register')
+         * @param {object} options - Fetch options (method, body, etc.)
+         * @returns {Promise<object>} Response data
+         */
+        async function apiRequest(endpoint, options = {}) {
+            const url = `${API_BASE_URL}${endpoint}`;
+
+            const defaultOptions = {
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include', // Include cookies for JWT
+                ...options
+            };
+
+            // Merge headers properly
+            if (options.headers) {
+                defaultOptions.headers = {
+                    ...defaultOptions.headers,
+                    ...options.headers
+                };
+            }
+
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
+
+                const response = await fetch(url, {
+                    ...defaultOptions,
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                // Parse response
+                let data;
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    data = await response.json();
+                } else {
+                    data = { message: await response.text() };
+                }
+
+                // Handle non-OK responses
+                if (!response.ok) {
+                    const error = new Error(data.message || `HTTP ${response.status}`);
+                    error.status = response.status;
+                    error.data = data;
+                    throw error;
+                }
+
+                return data;
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    throw new Error('Request timeout - please check your connection');
+                }
+
+                // Network errors
+                if (error instanceof TypeError) {
+                    throw new Error('Network error - please check your connection');
+                }
+
+                // Re-throw API errors with message
+                throw error;
+            }
+        }
+
+        /**
+         * Authentication API Methods
+         */
+        const AuthAPI = {
+            /**
+             * Register a new user
+             * @param {string} email - User email
+             * @param {string} password - User password
+             * @param {string} confirmPassword - Password confirmation
+             * @returns {Promise<object>} User data and session info
+             */
+            async register(email, password, confirmPassword) {
+                return apiRequest('/auth/register', {
+                    method: 'POST',
+                    body: JSON.stringify({ email, password, confirmPassword })
+                });
+            },
+
+            /**
+             * Login existing user
+             * @param {string} email - User email
+             * @param {string} password - User password
+             * @returns {Promise<object>} User data and session info
+             */
+            async login(email, password) {
+                return apiRequest('/auth/login', {
+                    method: 'POST',
+                    body: JSON.stringify({ email, password })
+                });
+            },
+
+            /**
+             * Logout current user
+             * @returns {Promise<object>} Logout confirmation
+             */
+            async logout() {
+                return apiRequest('/auth/logout', {
+                    method: 'POST'
+                });
+            },
+
+            /**
+             * Get current user session
+             * @returns {Promise<object>} Current user data
+             */
+            async getSession() {
+                return apiRequest('/auth/session', {
+                    method: 'GET'
+                });
+            }
+        };
+
+        /**
+         * User Data API Methods
+         */
+        const UserAPI = {
+            /**
+             * Get user profile
+             * @returns {Promise<object>} User profile data
+             */
+            async getProfile() {
+                return apiRequest('/user/profile', {
+                    method: 'GET'
+                });
+            },
+
+            /**
+             * Get all user streaks
+             * @returns {Promise<object>} All streak statistics
+             */
+            async getStreaks() {
+                return apiRequest('/user/streaks', {
+                    method: 'GET'
+                });
+            },
+
+            /**
+             * Complete today's task
+             * @param {string} taskDescription - Task that was completed
+             * @returns {Promise<object>} Updated streak data
+             */
+            async completeTask(taskDescription) {
+                return apiRequest('/user/complete', {
+                    method: 'POST',
+                    body: JSON.stringify({ taskDescription })
+                });
+            },
+
+            /**
+             * Get completion history
+             * @param {number} limit - Number of records to retrieve
+             * @param {number} offset - Pagination offset
+             * @returns {Promise<object>} History records
+             */
+            async getHistory(limit = 30, offset = 0) {
+                return apiRequest(`/user/history?limit=${limit}&offset=${offset}`, {
+                    method: 'GET'
+                });
+            },
+
+            /**
+             * Get analytics data
+             * @returns {Promise<object>} User analytics
+             */
+            async getAnalytics() {
+                return apiRequest('/user/analytics', {
+                    method: 'GET'
+                });
+            },
+
+            /**
+             * Update user preferences
+             * @param {object} preferences - User preferences object
+             * @returns {Promise<object>} Updated preferences
+             */
+            async updatePreferences(preferences) {
+                return apiRequest('/user/preferences', {
+                    method: 'PUT',
+                    body: JSON.stringify({ preferences })
+                });
+            }
+        };
+
+        // ============================================
+        // STATE MANAGEMENT SYSTEM (Step 26)
+        // ============================================
+
+        /**
+         * Application State Object
+         * Supports both anonymous (localStorage) and authenticated (API + cache) modes
+         */
+        const AppState = {
+            // Core streak data
+            streak: {
+                current: 0,
+                lastCompletedDate: null, // ISO string
+                bestStreak: 0,
+                history: [] // Array of completion date objects
+            },
+
+            // Current task
+            task: {
+                text: "",
+                date: null,
+                completed: false
+            },
+
+            // User authentication state
+            user: {
+                isAuthenticated: false,
+                profile: null // { id, email, createdAt, preferences }
+            },
+
+            // Sync state
+            sync: {
+                status: 'idle', // 'idle' | 'syncing' | 'error'
+                lastSyncTime: null,
+                error: null,
+                pendingChanges: false,
+                offlineQueue: []
+            },
+
+            // Network state
+            network: {
+                isOnline: navigator.onLine
+            },
+
+            // UI state
+            ui: {
+                authModalVisible: false,
+                authModalMode: 'login', // 'login' | 'register'
+                loadingVisible: false
+            },
+
+            // Engagement tracking
+            engagement: {
+                totalCompletions: 0,
+                consecutiveDays: 0,
+                firstVisit: null,
+                lastVisit: null,
+                visitCount: 0,
+                hasSeenAuthPrompt: false,
+                dismissedAuthPromptCount: 0
+            }
+        };
+
+        /**
+         * Load state from localStorage
+         * Supports both anonymous and authenticated modes
+         */
+        function loadState() {
+            try {
+                // Try authenticated state first
+                const authenticatedData = localStorage.getItem('cleanStreak_authenticated_state');
+                if (authenticatedData) {
+                    const data = JSON.parse(authenticatedData);
+
+                    // Restore state
+                    Object.assign(AppState.user, data.user || {});
+                    Object.assign(AppState.streak, data.streak || {});
+                    Object.assign(AppState.engagement, data.engagement || {});
+
+                    AppState.user.isAuthenticated = true;
+                    return;
+                }
+
+                // Fall back to anonymous state
+                const anonymousData = localStorage.getItem('cleanStreak_anonymous_state');
+                if (anonymousData) {
+                    const data = JSON.parse(anonymousData);
+
+                    Object.assign(AppState.streak, data.streak || {});
+                    Object.assign(AppState.engagement, data.engagement || {});
+                }
+
+                // Track visit
+                AppState.engagement.visitCount++;
+                AppState.engagement.lastVisit = new Date().toISOString();
+                if (!AppState.engagement.firstVisit) {
+                    AppState.engagement.firstVisit = new Date().toISOString();
+                }
+            } catch (error) {
+                console.error('Error loading state:', error);
+            }
+        }
+
+        /**
+         * Save state to localStorage
+         */
+        function saveState() {
+            try {
+                if (AppState.user.isAuthenticated) {
+                    // Save authenticated state
+                    const data = {
+                        user: AppState.user,
+                        streak: AppState.streak,
+                        engagement: AppState.engagement,
+                        lastSyncTime: AppState.sync.lastSyncTime || new Date().toISOString()
+                    };
+                    localStorage.setItem('cleanStreak_authenticated_state', JSON.stringify(data));
+                } else {
+                    // Save anonymous state
+                    const data = {
+                        streak: AppState.streak,
+                        engagement: AppState.engagement,
+                        lastSyncTime: new Date().toISOString()
+                    };
+                    localStorage.setItem('cleanStreak_anonymous_state', JSON.stringify(data));
+                }
+            } catch (error) {
+                console.error('Error saving state:', error);
+            }
+        }
+
+        /**
+         * Clear all persisted state
+         */
+        function clearState() {
+            localStorage.removeItem('cleanStreak_anonymous_state');
+            localStorage.removeItem('cleanStreak_authenticated_state');
+        }
+
+        /**
+         * Update UI to reflect current authentication state
+         */
+        function updateAuthUI() {
+            const statusBadge = document.getElementById('statusBadge');
+            const userEmail = document.getElementById('userEmail');
+            const loginButton = document.getElementById('loginButton');
+            const logoutButton = document.getElementById('logoutButton');
+
+            if (AppState.user.isAuthenticated && AppState.user.profile) {
+                // Authenticated state
+                statusBadge.textContent = 'Authenticated';
+                statusBadge.classList.add('authenticated');
+                userEmail.textContent = AppState.user.profile.email;
+                userEmail.style.display = 'block';
+                loginButton.style.display = 'none';
+                logoutButton.style.display = 'block';
+            } else {
+                // Anonymous state
+                statusBadge.textContent = 'Guest';
+                statusBadge.classList.remove('authenticated');
+                userEmail.style.display = 'none';
+                loginButton.style.display = 'block';
+                logoutButton.style.display = 'none';
+            }
+        }
+
+        // ============================================
+        // DATA SYNCHRONIZATION FUNCTIONS (Step 28)
+        // ============================================
+
+        /**
+         * Process offline queue - send queued actions to server
+         * @returns {Promise<void>}
+         */
+        async function processOfflineQueue() {
+            if (!AppState.user.isAuthenticated) return;
+            if (!AppState.network.isOnline) return;
+            if (AppState.sync.offlineQueue.length === 0) return;
+
+            console.log(`Processing ${AppState.sync.offlineQueue.length} offline actions...`);
+
+            const successfulActions = [];
+            const failedActions = [];
+
+            // Process each queued action
+            for (const queuedAction of AppState.sync.offlineQueue) {
+                try {
+                    if (queuedAction.action === 'COMPLETE_TASK') {
+                        await UserAPI.completeTask(queuedAction.payload.taskDescription);
+                        successfulActions.push(queuedAction);
+                        console.log('Synced offline task completion:', queuedAction.payload.taskDescription);
+                    }
+                    // Add more action types here as needed
+                } catch (error) {
+                    console.error('Failed to process offline action:', queuedAction, error);
+                    queuedAction.retryCount++;
+
+                    // Keep in queue if retry count < 3, otherwise drop it
+                    if (queuedAction.retryCount < 3) {
+                        failedActions.push(queuedAction);
+                    } else {
+                        console.warn('Dropping action after 3 failed retries:', queuedAction);
+                    }
+                }
+            }
+
+            // Update queue with only failed actions that should be retried
+            AppState.sync.offlineQueue = failedActions;
+
+            // Mark as having pending changes if queue is not empty
+            AppState.sync.pendingChanges = failedActions.length > 0;
+
+            console.log(`Offline queue processed: ${successfulActions.length} succeeded, ${failedActions.length} pending retry`);
+        }
+
+        /**
+         * Push local changes to server
+         * @returns {Promise<boolean>} Success status
+         */
+        async function pushLocalChangesToServer() {
+            if (!AppState.user.isAuthenticated) return false;
+            if (!AppState.network.isOnline) return false;
+
+            try {
+                // Check if there are local changes that need to be pushed
+                // This is primarily for offline queue and any pending state changes
+
+                // Process offline queue first
+                await processOfflineQueue();
+
+                // Additional sync logic could go here for other state changes
+                // For now, task completions are the main sync point
+
+                return true;
+            } catch (error) {
+                console.error('Error pushing local changes:', error);
+                return false;
+            }
+        }
+
+        /**
+         * Fetch latest data from server and update local state
+         * @returns {Promise<Object|null>} Server data or null on error
+         */
+        async function fetchServerData() {
+            if (!AppState.user.isAuthenticated) return null;
+            if (!AppState.network.isOnline) return null;
+
+            try {
+                // Fetch latest data from server (streaks, history, profile)
+                const [streaksResponse, historyResponse, profileResponse] = await Promise.all([
+                    UserAPI.getStreaks(),
+                    UserAPI.getHistory(),
+                    UserAPI.getProfile()
+                ]);
+
+                return {
+                    streaks: streaksResponse,
+                    history: historyResponse,
+                    profile: profileResponse
+                };
+            } catch (error) {
+                console.error('Error fetching server data:', error);
+                return null;
+            }
+        }
+
+        /**
+         * Merge server data into local state
+         * @param {Object} serverData - Data fetched from server
+         */
+        function mergeServerDataIntoLocalState(serverData) {
+            if (!serverData) return;
+
+            // Update streak data from server
+            if (serverData.streaks && serverData.streaks.success && serverData.streaks.data) {
+                const streaks = serverData.streaks.data.streaks || [];
+                const stats = serverData.streaks.data.stats || {};
+
+                // Server is the source of truth for streaks
+                AppState.streak.current = stats.totalCurrentStreak || 0;
+                AppState.streak.bestStreak = stats.bestOverallStreak || 0;
+
+                // Find the most recent completion date from streaks
+                if (streaks.length > 0) {
+                    const mostRecent = streaks.reduce((latest, streak) => {
+                        const streakDate = new Date(streak.lastCompletedAt);
+                        const latestDate = latest ? new Date(latest) : new Date(0);
+                        return streakDate > latestDate ? streak.lastCompletedAt : latest;
+                    }, null);
+
+                    if (mostRecent) {
+                        AppState.streak.lastCompletedDate = new Date(mostRecent).toDateString();
+                    }
+                }
+
+                // Build history from streaks (dates when tasks were completed)
+                AppState.streak.history = streaks.map(streak =>
+                    new Date(streak.lastCompletedAt).toDateString()
+                );
+            }
+
+            // Update engagement from profile stats
+            if (serverData.profile && serverData.profile.success && serverData.profile.data) {
+                const profileStats = serverData.profile.data.stats || {};
+                AppState.engagement.totalCompletions = profileStats.totalCompletions || 0;
+                AppState.engagement.consecutiveDays = AppState.streak.current;
+            }
+
+            // Update task history for analytics
+            if (serverData.history && serverData.history.success && serverData.history.data) {
+                const historyItems = serverData.history.data.history || [];
+                AppState.task.history = historyItems.map(item => ({
+                    taskDescription: item.taskDescription,
+                    completedAt: item.completedAt,
+                    streakDay: item.streakDay || 0
+                }));
+            }
+
+            console.log('Server data merged into local state');
+        }
+
+        /**
+         * Main sync function - bi-directional sync between client and server
+         * This is the primary sync function called throughout the app
+         */
+        async function syncWithServer() {
+            if (!AppState.user.isAuthenticated) {
+                console.log('Sync skipped: user not authenticated');
+                return;
+            }
+
+            if (!AppState.network.isOnline) {
+                console.log('Sync skipped: offline');
+                return;
+            }
+
+            if (AppState.sync.status === 'syncing') {
+                console.log('Sync already in progress, skipping...');
+                return;
+            }
+
+            try {
+                console.log('Starting data synchronization...');
+                AppState.sync.status = 'syncing';
+                AppState.sync.error = null;
+
+                // Step 1: Push local changes to server (includes offline queue)
+                await pushLocalChangesToServer();
+
+                // Step 2: Fetch latest data from server
+                const serverData = await fetchServerData();
+
+                // Step 3: Merge server data into local state
+                if (serverData) {
+                    mergeServerDataIntoLocalState(serverData);
+                }
+
+                // Step 4: Update sync metadata
+                AppState.sync.lastSyncTime = new Date().toISOString();
+                AppState.sync.status = 'idle';
+                AppState.sync.error = null;
+                AppState.sync.pendingChanges = AppState.sync.offlineQueue.length > 0;
+
+                // Step 5: Save updated state to localStorage
+                saveState();
+
+                console.log('Data synchronization completed successfully');
+            } catch (error) {
+                console.error('Sync error:', error);
+                AppState.sync.status = 'error';
+                AppState.sync.error = error.message;
+
+                // Save state even on error to persist the error status
+                saveState();
+            }
+        }
+
+        /**
+         * Background sync scheduler - runs periodically for authenticated users
+         * Syncs every 5 minutes when user is active
+         */
+        let syncIntervalId = null;
+
+        function startBackgroundSync() {
+            // Clear any existing interval
+            if (syncIntervalId) {
+                clearInterval(syncIntervalId);
+            }
+
+            // Only start background sync for authenticated users
+            if (!AppState.user.isAuthenticated) return;
+
+            console.log('Starting background sync (5-minute intervals)');
+
+            // Sync immediately
+            syncWithServer();
+
+            // Then sync every 5 minutes
+            syncIntervalId = setInterval(() => {
+                if (AppState.user.isAuthenticated && AppState.network.isOnline) {
+                    syncWithServer();
+                }
+            }, 5 * 60 * 1000); // 5 minutes
+        }
+
+        function stopBackgroundSync() {
+            if (syncIntervalId) {
+                clearInterval(syncIntervalId);
+                syncIntervalId = null;
+                console.log('Background sync stopped');
+            }
+        }
+
+        /**
+         * Force an immediate sync (can be called manually)
+         */
+        async function forceSyncNow() {
+            console.log('Force sync requested...');
+            await syncWithServer();
+        }
+
+        /**
+         * Migrate anonymous data to authenticated account
+         */
+        async function migrateAnonymousData() {
+            // Check if there's anonymous data to migrate
+            const anonymousData = localStorage.getItem('cleanStreak_anonymous_state');
+            if (!anonymousData) return;
+
+            try {
+                const data = JSON.parse(anonymousData);
+
+                // If anonymous user has a streak, merge it
+                if (data.streak && data.streak.current > 0) {
+                    // Server-side migration would happen here via API
+                    // For now, keep the higher streak value
+                    if (data.streak.current > AppState.streak.current) {
+                        AppState.streak.current = data.streak.current;
+                        AppState.streak.lastCompletedDate = data.streak.lastCompletedDate;
+                    }
+                    if (data.streak.bestStreak > AppState.streak.bestStreak) {
+                        AppState.streak.bestStreak = data.streak.bestStreak;
+                    }
+                }
+
+                // Merge engagement data
+                if (data.engagement) {
+                    AppState.engagement.totalCompletions += data.engagement.totalCompletions || 0;
+                }
+
+                // Clear anonymous data
+                localStorage.removeItem('cleanStreak_anonymous_state');
+
+                saveState();
+            } catch (error) {
+                console.error('Migration error:', error);
+            }
+        }
+
+        // ============================================
+        // LEGACY COMPATIBILITY LAYER
+        // ============================================
+        // Maintain backward compatibility with existing code
+
+        Object.defineProperty(window, 'currentStreak', {
+            get() { return AppState.streak.current; },
+            set(value) { AppState.streak.current = value; }
+        });
+
+        Object.defineProperty(window, 'lastCompletedDate', {
+            get() { return AppState.streak.lastCompletedDate; },
+            set(value) { AppState.streak.lastCompletedDate = value; }
+        });
+
+        // ============================================
+        // CORE APPLICATION FUNCTIONS
+        // ============================================
 
         function getTodaysTask() {
             const today = new Date();
@@ -621,10 +1299,10 @@
             }
         }
 
-        function completeTask() {
+        async function completeTask() {
             const todayString = getTodayString();
 
-            if (lastCompletedDate === todayString) {
+            if (AppState.streak.lastCompletedDate === todayString) {
                 return;
             }
 
@@ -632,24 +1310,361 @@
             yesterday.setDate(yesterday.getDate() - 1);
             const yesterdayString = yesterday.toDateString();
 
-            if (lastCompletedDate === yesterdayString || currentStreak === 0) {
-                currentStreak++;
+            if (AppState.streak.lastCompletedDate === yesterdayString || AppState.streak.current === 0) {
+                AppState.streak.current++;
             } else {
-                currentStreak = 1;
+                AppState.streak.current = 1;
             }
 
-            lastCompletedDate = todayString;
+            AppState.streak.lastCompletedDate = todayString;
 
+            // Update engagement tracking
+            AppState.engagement.totalCompletions++;
+            AppState.engagement.consecutiveDays = AppState.streak.current;
+
+            // Update best streak
+            if (AppState.streak.current > AppState.streak.bestStreak) {
+                AppState.streak.bestStreak = AppState.streak.current;
+            }
+
+            // Animation
             document.querySelector('.container').classList.add('completion-animation');
             setTimeout(() => {
                 document.querySelector('.container').classList.remove('completion-animation');
             }, 600);
 
+            // Save to localStorage
+            saveState();
+
+            // If authenticated, also save to server
+            if (AppState.user.isAuthenticated) {
+                try {
+                    const taskText = getTodaysTask();
+                    await UserAPI.completeTask(taskText);
+                    await syncWithServer(); // Sync to get latest data
+                } catch (error) {
+                    console.error('Error saving to server:', error);
+                    // Queue for offline sync
+                    AppState.sync.offlineQueue.push({
+                        action: 'COMPLETE_TASK',
+                        payload: { taskDescription: getTodaysTask(), date: todayString },
+                        timestamp: new Date().toISOString(),
+                        retryCount: 0
+                    });
+                }
+            }
+
             updateDisplay();
         }
 
+        // ============================================
+        // AUTHENTICATION LOGIC (Step 27)
+        // ============================================
+
+        /**
+         * Show authentication modal
+         * @param {string} mode - 'login' or 'register'
+         */
+        function showAuthModal(mode = 'login') {
+            AppState.ui.authModalMode = mode;
+            AppState.ui.authModalVisible = true;
+
+            const overlay = document.getElementById('authOverlay');
+            const loginForm = document.getElementById('loginForm');
+            const registerForm = document.getElementById('registerForm');
+
+            if (mode === 'login') {
+                loginForm.style.display = 'block';
+                registerForm.style.display = 'none';
+            } else {
+                loginForm.style.display = 'none';
+                registerForm.style.display = 'block';
+            }
+
+            overlay.style.display = 'flex';
+
+            // Clear any previous errors
+            document.getElementById('loginError').classList.remove('show');
+            document.getElementById('registerError').classList.remove('show');
+        }
+
+        /**
+         * Hide authentication modal
+         */
+        function hideAuthModal() {
+            AppState.ui.authModalVisible = false;
+            document.getElementById('authOverlay').style.display = 'none';
+
+            // Clear form fields
+            document.getElementById('loginFormElement').reset();
+            document.getElementById('registerFormElement').reset();
+        }
+
+        /**
+         * Show error message in auth form
+         * @param {string} formType - 'login' or 'register'
+         * @param {string} message - Error message to display
+         */
+        function showAuthError(formType, message) {
+            const errorElement = document.getElementById(`${formType}Error`);
+            errorElement.textContent = message;
+            errorElement.classList.add('show');
+        }
+
+        /**
+         * Handle user registration
+         * @param {Event} event - Form submit event
+         */
+        async function handleRegister(event) {
+            event.preventDefault();
+
+            const email = document.getElementById('registerEmail').value.trim();
+            const password = document.getElementById('registerPassword').value;
+            const confirmPassword = document.getElementById('registerConfirmPassword').value;
+
+            // Clear previous errors
+            document.getElementById('registerError').classList.remove('show');
+
+            // Client-side validation
+            if (!email || !password || !confirmPassword) {
+                showAuthError('register', 'All fields are required');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                showAuthError('register', 'Passwords do not match');
+                return;
+            }
+
+            if (password.length < 8) {
+                showAuthError('register', 'Password must be at least 8 characters');
+                return;
+            }
+
+            // Show loading state
+            const submitButton = document.getElementById('registerSubmitButton');
+            submitButton.disabled = true;
+            submitButton.classList.add('loading');
+
+            try {
+                // Call register API
+                const response = await AuthAPI.register(email, password, confirmPassword);
+
+                // Update state with user data
+                AppState.user.isAuthenticated = true;
+                AppState.user.profile = {
+                    id: response.user.id,
+                    email: response.user.email,
+                    createdAt: response.user.createdAt,
+                    preferences: response.user.preferences || {}
+                };
+
+                // Migrate any anonymous data
+                await migrateAnonymousData();
+
+                // Sync with server to get latest data
+                await syncWithServer();
+
+                // Start background sync for authenticated user
+                startBackgroundSync();
+
+                // Save state
+                saveState();
+
+                // Update UI
+                updateAuthUI();
+
+                // Hide modal
+                hideAuthModal();
+
+                // Show success (optional)
+                console.log('Registration successful!');
+            } catch (error) {
+                console.error('Registration error:', error);
+                showAuthError('register', error.message || 'Registration failed. Please try again.');
+            } finally {
+                // Reset button state
+                submitButton.disabled = false;
+                submitButton.classList.remove('loading');
+            }
+        }
+
+        /**
+         * Handle user login
+         * @param {Event} event - Form submit event
+         */
+        async function handleLogin(event) {
+            event.preventDefault();
+
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value;
+
+            // Clear previous errors
+            document.getElementById('loginError').classList.remove('show');
+
+            // Client-side validation
+            if (!email || !password) {
+                showAuthError('login', 'Email and password are required');
+                return;
+            }
+
+            // Show loading state
+            const submitButton = document.getElementById('loginSubmitButton');
+            submitButton.disabled = true;
+            submitButton.classList.add('loading');
+
+            try {
+                // Call login API
+                const response = await AuthAPI.login(email, password);
+
+                // Update state with user data
+                AppState.user.isAuthenticated = true;
+                AppState.user.profile = {
+                    id: response.user.id,
+                    email: response.user.email,
+                    createdAt: response.user.createdAt,
+                    preferences: response.user.preferences || {}
+                };
+
+                // Migrate any anonymous data
+                await migrateAnonymousData();
+
+                // Sync with server to get latest data
+                await syncWithServer();
+
+                // Start background sync for authenticated user
+                startBackgroundSync();
+
+                // Save state
+                saveState();
+
+                // Update UI
+                updateAuthUI();
+
+                // Hide modal
+                hideAuthModal();
+
+                // Show success (optional)
+                console.log('Login successful!');
+            } catch (error) {
+                console.error('Login error:', error);
+                showAuthError('login', error.message || 'Login failed. Please check your credentials.');
+            } finally {
+                // Reset button state
+                submitButton.disabled = false;
+                submitButton.classList.remove('loading');
+            }
+        }
+
+        /**
+         * Handle user logout
+         */
+        async function handleLogout() {
+            try {
+                // Call logout API
+                await AuthAPI.logout();
+            } catch (error) {
+                console.error('Logout error:', error);
+                // Continue with local logout even if API call fails
+            }
+
+            // Stop background sync
+            stopBackgroundSync();
+
+            // Clear authenticated state
+            AppState.user.isAuthenticated = false;
+            AppState.user.profile = null;
+            AppState.sync.status = 'idle';
+            AppState.sync.lastSyncTime = null;
+
+            // Clear authenticated data from localStorage
+            clearState();
+
+            // Reset to anonymous state
+            AppState.streak = {
+                current: 0,
+                lastCompletedDate: null,
+                bestStreak: 0,
+                history: []
+            };
+            AppState.engagement = {
+                totalCompletions: 0,
+                consecutiveDays: 0,
+                firstVisit: null,
+                lastVisit: null,
+                visitCount: 0,
+                hasSeenAuthPrompt: false,
+                dismissedAuthPromptCount: 0
+            };
+
+            // Update UI
+            updateAuthUI();
+            updateDisplay();
+
+            console.log('Logged out successfully');
+        }
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+
+        // Load state on page load
+        loadState();
+
+        // Update UI to match authentication state
+        updateAuthUI();
+
+        // Start background sync if user is authenticated
+        if (AppState.user.isAuthenticated) {
+            startBackgroundSync();
+        }
+
+        // Network status monitoring
+        window.addEventListener('online', () => {
+            AppState.network.isOnline = true;
+            // Try to sync when coming back online
+            if (AppState.user.isAuthenticated) {
+                syncWithServer();
+            }
+        });
+
+        window.addEventListener('offline', () => {
+            AppState.network.isOnline = false;
+        });
+
+        // Event listeners - Core functionality
         document.getElementById('doneButton').addEventListener('click', completeTask);
 
+        // Event listeners - Authentication
+        document.getElementById('loginButton').addEventListener('click', () => showAuthModal('login'));
+        document.getElementById('logoutButton').addEventListener('click', handleLogout);
+
+        // Form submissions
+        document.getElementById('loginFormElement').addEventListener('submit', handleLogin);
+        document.getElementById('registerFormElement').addEventListener('submit', handleRegister);
+
+        // Modal controls
+        document.getElementById('closeLoginModal').addEventListener('click', hideAuthModal);
+        document.getElementById('closeRegisterModal').addEventListener('click', hideAuthModal);
+
+        // Switch between login and register
+        document.getElementById('showRegisterLink').addEventListener('click', (e) => {
+            e.preventDefault();
+            showAuthModal('register');
+        });
+        document.getElementById('showLoginLink').addEventListener('click', (e) => {
+            e.preventDefault();
+            showAuthModal('login');
+        });
+
+        // Close modal when clicking overlay
+        document.getElementById('authOverlay').addEventListener('click', (e) => {
+            if (e.target.id === 'authOverlay') {
+                hideAuthModal();
+            }
+        });
+
+        // Initial display update
         updateDisplay();
     </script>
 </body>
