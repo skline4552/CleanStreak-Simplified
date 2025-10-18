@@ -424,15 +424,209 @@
                 padding: 15px;
             }
         }
+
+        /* Offline Status Indicator Styles */
+        .offline-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #f8d7da;
+            color: #721c24;
+            padding: 12px 20px;
+            border-radius: 8px;
+            border: 2px solid #f5c6cb;
+            font-size: 0.9rem;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+            z-index: 2000;
+            display: none;
+            animation: slideInRight 0.3s ease;
+        }
+
+        .offline-indicator.show {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .offline-indicator .status-icon {
+            font-size: 1.2rem;
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(100px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /* Notification Toast Styles */
+        .notification-toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+            z-index: 2000;
+            display: none;
+            animation: slideInUp 0.3s ease;
+            max-width: 350px;
+            border-left: 4px solid #667eea;
+        }
+
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .notification-toast.show {
+            display: block;
+        }
+
+        .notification-toast.success {
+            border-left-color: #28a745;
+        }
+
+        .notification-toast.info {
+            border-left-color: #17a2b8;
+        }
+
+        .notification-toast.warning {
+            border-left-color: #ffc107;
+        }
+
+        .notification-toast.error {
+            border-left-color: #dc3545;
+        }
+
+        .notification-toast .toast-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .notification-toast .toast-icon {
+            font-size: 1.5rem;
+        }
+
+        .notification-toast .toast-message {
+            color: #333;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        /* Connection Status Badge in Header */
+        .connection-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            background: #d4edda;
+            color: #155724;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border-radius: 10px;
+            margin-left: 8px;
+        }
+
+        .connection-status.offline {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .connection-status .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #28a745;
+        }
+
+        .connection-status.offline .status-dot {
+            background: #dc3545;
+        }
+
+        /* Sync Queue Indicator */
+        .sync-queue-indicator {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            background: #fff3cd;
+            color: #856404;
+            padding: 12px 20px;
+            border-radius: 8px;
+            border: 2px solid #ffeaa7;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+            z-index: 1500;
+            display: none;
+            animation: pulse 2s infinite;
+        }
+
+        .sync-queue-indicator.show {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        @media (max-width: 480px) {
+            .offline-indicator,
+            .notification-toast,
+            .sync-queue-indicator {
+                left: 15px;
+                right: 15px;
+                max-width: calc(100% - 30px);
+            }
+
+            .connection-status {
+                display: none;
+            }
+        }
     </style>
 </head>
 <body>
+    <!-- Offline Status Indicator -->
+    <div class="offline-indicator" id="offlineIndicator">
+        <span class="status-icon">&#9888;</span>
+        <span>You're offline. Changes will sync when reconnected.</span>
+    </div>
+
+    <!-- Notification Toast -->
+    <div class="notification-toast" id="notificationToast">
+        <div class="toast-content">
+            <span class="toast-icon" id="toastIcon"></span>
+            <span class="toast-message" id="toastMessage"></span>
+        </div>
+    </div>
+
+    <!-- Sync Queue Indicator -->
+    <div class="sync-queue-indicator" id="syncQueueIndicator">
+        <span>&#8987;</span>
+        <span id="syncQueueText">Pending sync...</span>
+    </div>
+
     <div class="container">
         <!-- User Header -->
         <div class="user-header">
             <div class="user-status" id="userStatus">
                 <span class="status-badge" id="statusBadge">Guest</span>
                 <span class="user-email" id="userEmail" style="display: none;"></span>
+                <span class="connection-status" id="connectionStatus">
+                    <span class="status-dot"></span>
+                    <span id="connectionText">Online</span>
+                </span>
             </div>
             <div class="user-actions">
                 <button class="header-button" id="loginButton">Sign In</button>
@@ -1434,6 +1628,263 @@
         }
 
         // ============================================
+        // OFFLINE FUNCTIONALITY ENHANCEMENTS (Step 30)
+        // ============================================
+
+        /**
+         * Show notification toast
+         * @param {string} message - Message to display
+         * @param {string} type - Type of notification: success, info, warning, error
+         * @param {number} duration - Duration in milliseconds (default: 4000)
+         */
+        function showNotification(message, type = 'info', duration = 4000) {
+            const toast = document.getElementById('notificationToast');
+            const icon = document.getElementById('toastIcon');
+            const messageEl = document.getElementById('toastMessage');
+
+            // Set icon based on type
+            const icons = {
+                success: '&#10004;',
+                info: '&#9432;',
+                warning: '&#9888;',
+                error: '&#10006;'
+            };
+
+            icon.innerHTML = icons[type] || icons.info;
+            messageEl.textContent = message;
+
+            // Reset classes
+            toast.className = 'notification-toast show ' + type;
+
+            // Auto-hide after duration
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, duration);
+        }
+
+        /**
+         * Update connection status indicator in UI
+         */
+        function updateConnectionStatus() {
+            const offlineIndicator = document.getElementById('offlineIndicator');
+            const connectionStatus = document.getElementById('connectionStatus');
+            const connectionText = document.getElementById('connectionText');
+
+            if (AppState.network.isOnline) {
+                // Online state
+                offlineIndicator.classList.remove('show');
+                connectionStatus.classList.remove('offline');
+                connectionText.textContent = 'Online';
+            } else {
+                // Offline state
+                offlineIndicator.classList.add('show');
+                connectionStatus.classList.add('offline');
+                connectionText.textContent = 'Offline';
+            }
+        }
+
+        /**
+         * Update sync queue indicator
+         */
+        function updateSyncQueueIndicator() {
+            const syncQueueIndicator = document.getElementById('syncQueueIndicator');
+            const syncQueueText = document.getElementById('syncQueueText');
+
+            const queueLength = AppState.sync.offlineQueue.length;
+
+            if (queueLength > 0) {
+                syncQueueIndicator.classList.add('show');
+                syncQueueText.textContent = queueLength === 1
+                    ? '1 action pending sync...'
+                    : `${queueLength} actions pending sync...`;
+            } else {
+                syncQueueIndicator.classList.remove('show');
+            }
+        }
+
+        /**
+         * Handle when app goes offline
+         */
+        function handleOffline() {
+            console.log('Network status: OFFLINE');
+            AppState.network.isOnline = false;
+            updateConnectionStatus();
+
+            // Only show notification if user is authenticated (anonymous users don't sync anyway)
+            if (AppState.user.isAuthenticated) {
+                showNotification('You\'re offline. Changes will sync when reconnected.', 'warning', 6000);
+            }
+
+            saveState();
+        }
+
+        /**
+         * Handle when app comes back online
+         */
+        async function handleOnline() {
+            console.log('Network status: ONLINE');
+            AppState.network.isOnline = true;
+            updateConnectionStatus();
+
+            // Show notification
+            if (AppState.user.isAuthenticated) {
+                showNotification('Connection restored! Syncing data...', 'success', 3000);
+            }
+
+            // Process offline queue if user is authenticated
+            if (AppState.user.isAuthenticated) {
+                const queueLength = AppState.sync.offlineQueue.length;
+
+                if (queueLength > 0) {
+                    console.log(`Processing ${queueLength} queued actions after reconnection...`);
+
+                    // Process the offline queue
+                    await processOfflineQueue();
+
+                    // Sync with server to get latest data
+                    await syncWithServer();
+
+                    // Update queue indicator
+                    updateSyncQueueIndicator();
+
+                    // Show success notification
+                    const remainingQueue = AppState.sync.offlineQueue.length;
+                    if (remainingQueue === 0) {
+                        showNotification('All changes synced successfully!', 'success', 3000);
+                    } else if (remainingQueue < queueLength) {
+                        showNotification(`${queueLength - remainingQueue} of ${queueLength} changes synced. ${remainingQueue} pending retry.`, 'warning', 4000);
+                    }
+                } else {
+                    // Just sync to get latest server data
+                    await syncWithServer();
+                }
+            }
+
+            saveState();
+        }
+
+        /**
+         * Enhanced queue processing with better error handling
+         */
+        async function processOfflineQueueEnhanced() {
+            if (!AppState.user.isAuthenticated) return;
+            if (!AppState.network.isOnline) return;
+            if (AppState.sync.offlineQueue.length === 0) return;
+
+            console.log(`Processing ${AppState.sync.offlineQueue.length} offline actions...`);
+
+            const successfulActions = [];
+            const failedActions = [];
+
+            // Update indicator at start
+            updateSyncQueueIndicator();
+
+            // Process each queued action
+            for (const queuedAction of AppState.sync.offlineQueue) {
+                try {
+                    if (queuedAction.action === 'COMPLETE_TASK') {
+                        await UserAPI.completeTask(queuedAction.payload.taskDescription);
+                        successfulActions.push(queuedAction);
+                        console.log('Synced offline task completion:', queuedAction.payload.taskDescription);
+                    }
+                    // Add more action types here as needed
+                } catch (error) {
+                    console.error('Failed to process offline action:', queuedAction, error);
+                    queuedAction.retryCount = (queuedAction.retryCount || 0) + 1;
+
+                    // Keep in queue if retry count < 3, otherwise drop it
+                    if (queuedAction.retryCount < 3) {
+                        failedActions.push(queuedAction);
+                    } else {
+                        console.warn('Dropping action after 3 failed retries:', queuedAction);
+                    }
+                }
+            }
+
+            // Update queue with only failed actions that should be retried
+            AppState.sync.offlineQueue = failedActions;
+
+            // Mark as having pending changes if queue is not empty
+            AppState.sync.pendingChanges = failedActions.length > 0;
+
+            // Update indicator after processing
+            updateSyncQueueIndicator();
+
+            // Save state
+            saveState();
+
+            console.log(`Offline queue processed: ${successfulActions.length} succeeded, ${failedActions.length} pending retry`);
+
+            return {
+                succeeded: successfulActions.length,
+                failed: failedActions.length
+            };
+        }
+
+        /**
+         * Check if app is truly online by pinging the API
+         * @returns {Promise<boolean>} True if server is reachable
+         */
+        async function checkServerConnectivity() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/health`, {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' },
+                    signal: AbortSignal.timeout(5000) // 5 second timeout
+                });
+
+                return response.ok;
+            } catch (error) {
+                console.log('Server connectivity check failed:', error.message);
+                return false;
+            }
+        }
+
+        /**
+         * Periodic connectivity check for authenticated users
+         * Runs every 30 seconds to detect server availability
+         */
+        let connectivityCheckInterval = null;
+
+        function startConnectivityMonitoring() {
+            // Clear any existing interval
+            if (connectivityCheckInterval) {
+                clearInterval(connectivityCheckInterval);
+            }
+
+            // Only monitor if user is authenticated
+            if (!AppState.user.isAuthenticated) return;
+
+            console.log('Starting connectivity monitoring');
+
+            // Check every 30 seconds
+            connectivityCheckInterval = setInterval(async () => {
+                if (AppState.network.isOnline && AppState.user.isAuthenticated) {
+                    const serverReachable = await checkServerConnectivity();
+
+                    if (!serverReachable) {
+                        // Server is unreachable even though browser thinks we're online
+                        console.log('Server unreachable despite online status');
+                        // Don't change network status, but log for debugging
+                    } else if (AppState.sync.offlineQueue.length > 0) {
+                        // Server is reachable and we have queued actions - try to sync
+                        console.log('Server reachable with pending queue - attempting sync');
+                        await processOfflineQueueEnhanced();
+                        await syncWithServer();
+                    }
+                }
+            }, 30000); // 30 seconds
+        }
+
+        function stopConnectivityMonitoring() {
+            if (connectivityCheckInterval) {
+                clearInterval(connectivityCheckInterval);
+                connectivityCheckInterval = null;
+                console.log('Connectivity monitoring stopped');
+            }
+        }
+
+        // ============================================
         // LEGACY COMPATIBILITY LAYER
         // ============================================
         // Maintain backward compatibility with existing code
@@ -1536,6 +1987,16 @@
                         timestamp: new Date().toISOString(),
                         retryCount: 0
                     });
+
+                    // Update sync queue indicator
+                    updateSyncQueueIndicator();
+
+                    // Show notification about queued action
+                    if (!AppState.network.isOnline) {
+                        showNotification('Task saved locally. Will sync when online.', 'info', 4000);
+                    } else {
+                        showNotification('Sync failed. Task queued for retry.', 'warning', 4000);
+                    }
                 }
             }
 
@@ -1653,16 +2114,22 @@
                 // Start background sync for authenticated user
                 startBackgroundSync();
 
+                // Start connectivity monitoring
+                startConnectivityMonitoring();
+
                 // Save state
                 saveState();
 
                 // Update UI
                 updateAuthUI();
+                updateConnectionStatus();
+                updateSyncQueueIndicator();
 
                 // Hide modal
                 hideAuthModal();
 
-                // Show success (optional)
+                // Show success notification
+                showNotification('Account created successfully!', 'success', 3000);
                 console.log('Registration successful!');
             } catch (error) {
                 console.error('Registration error:', error);
@@ -1720,16 +2187,22 @@
                 // Start background sync for authenticated user
                 startBackgroundSync();
 
+                // Start connectivity monitoring
+                startConnectivityMonitoring();
+
                 // Save state
                 saveState();
 
                 // Update UI
                 updateAuthUI();
+                updateConnectionStatus();
+                updateSyncQueueIndicator();
 
                 // Hide modal
                 hideAuthModal();
 
-                // Show success (optional)
+                // Show success notification
+                showNotification('Welcome back!', 'success', 3000);
                 console.log('Login successful!');
             } catch (error) {
                 console.error('Login error:', error);
@@ -1753,14 +2226,16 @@
                 // Continue with local logout even if API call fails
             }
 
-            // Stop background sync
+            // Stop background sync and connectivity monitoring
             stopBackgroundSync();
+            stopConnectivityMonitoring();
 
             // Clear authenticated state
             AppState.user.isAuthenticated = false;
             AppState.user.profile = null;
             AppState.sync.status = 'idle';
             AppState.sync.lastSyncTime = null;
+            AppState.sync.offlineQueue = [];
 
             // Clear authenticated data from localStorage
             clearState();
@@ -1784,7 +2259,12 @@
 
             // Update UI
             updateAuthUI();
+            updateConnectionStatus();
+            updateSyncQueueIndicator();
             updateDisplay();
+
+            // Show notification
+            showNotification('Logged out successfully', 'info', 3000);
 
             console.log('Logged out successfully');
         }
@@ -1799,23 +2279,21 @@
         // Update UI to match authentication state
         updateAuthUI();
 
+        // Initialize connection status display
+        updateConnectionStatus();
+
+        // Initialize sync queue indicator
+        updateSyncQueueIndicator();
+
         // Start background sync if user is authenticated
         if (AppState.user.isAuthenticated) {
             startBackgroundSync();
+            startConnectivityMonitoring();
         }
 
-        // Network status monitoring
-        window.addEventListener('online', () => {
-            AppState.network.isOnline = true;
-            // Try to sync when coming back online
-            if (AppState.user.isAuthenticated) {
-                syncWithServer();
-            }
-        });
-
-        window.addEventListener('offline', () => {
-            AppState.network.isOnline = false;
-        });
+        // Network status monitoring with enhanced offline handling
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
 
         // Event listeners - Core functionality
         document.getElementById('doneButton').addEventListener('click', completeTask);
