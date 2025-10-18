@@ -1141,18 +1141,41 @@
                 // Step 2: Fetch latest data from server
                 const serverData = await fetchServerData();
 
-                // Step 3: Merge server data into local state
-                if (serverData) {
+                // Step 3: Check for conflicts and resolve if necessary
+                if (serverData && hasConflict(AppState, serverData)) {
+                    console.log('Conflict detected - applying resolution rules...');
+
+                    // Resolve the conflict
+                    const resolved = resolveConflict(AppState, serverData);
+
+                    // Apply resolved state to AppState
+                    Object.assign(AppState.streak, resolved.streak);
+                    Object.assign(AppState.engagement, resolved.engagement);
+
+                    // Push resolved state back to server to ensure consistency
+                    // This ensures the server has the resolved "winning" values
+                    try {
+                        await UserAPI.updatePreferences({
+                            resolvedStreak: resolved.streak,
+                            resolvedEngagement: resolved.engagement
+                        });
+                        console.log('Resolved state pushed to server');
+                    } catch (pushError) {
+                        console.warn('Failed to push resolved state to server:', pushError);
+                        // Continue anyway - local state is updated
+                    }
+                } else if (serverData) {
+                    // Step 4: No conflict - merge server data into local state normally
                     mergeServerDataIntoLocalState(serverData);
                 }
 
-                // Step 4: Update sync metadata
+                // Step 5: Update sync metadata
                 AppState.sync.lastSyncTime = new Date().toISOString();
                 AppState.sync.status = 'idle';
                 AppState.sync.error = null;
                 AppState.sync.pendingChanges = AppState.sync.offlineQueue.length > 0;
 
-                // Step 5: Save updated state to localStorage
+                // Step 6: Save updated state to localStorage
                 saveState();
 
                 console.log('Data synchronization completed successfully');
@@ -1246,6 +1269,168 @@
             } catch (error) {
                 console.error('Migration error:', error);
             }
+        }
+
+        // ============================================
+        // CONFLICT RESOLUTION LOGIC (Step 29)
+        // ============================================
+
+        /**
+         * Detect if there's a conflict between local and server state
+         * @param {Object} localState - Current local AppState
+         * @param {Object} serverData - Server data from fetchServerData()
+         * @returns {boolean} True if conflict detected
+         */
+        function hasConflict(localState, serverData) {
+            if (!serverData || !serverData.streaks || !serverData.streaks.success) {
+                return false;
+            }
+
+            const serverStats = serverData.streaks.data?.stats || {};
+            const serverStreaks = serverData.streaks.data?.streaks || [];
+
+            // Check for streak value conflicts
+            const streakDiffers = localState.streak.current !== (serverStats.totalCurrentStreak || 0);
+
+            // Check for last completion date conflicts
+            let lastCompletionDiffers = false;
+            if (serverStreaks.length > 0) {
+                const mostRecentServer = serverStreaks.reduce((latest, streak) => {
+                    const streakDate = new Date(streak.lastCompletedAt);
+                    const latestDate = latest ? new Date(latest) : new Date(0);
+                    return streakDate > latestDate ? streak.lastCompletedAt : latest;
+                }, null);
+
+                if (mostRecentServer) {
+                    const serverDateString = new Date(mostRecentServer).toDateString();
+                    lastCompletionDiffers = localState.streak.lastCompletedDate !== serverDateString;
+                }
+            }
+
+            // Check for best streak conflicts
+            const bestStreakDiffers = localState.streak.bestStreak !== (serverStats.bestOverallStreak || 0);
+
+            const hasConflict = streakDiffers || lastCompletionDiffers || bestStreakDiffers;
+
+            if (hasConflict) {
+                console.log('Conflict detected between local and server state', {
+                    localCurrent: localState.streak.current,
+                    serverCurrent: serverStats.totalCurrentStreak,
+                    localLast: localState.streak.lastCompletedDate,
+                    serverLast: mostRecentServer,
+                    localBest: localState.streak.bestStreak,
+                    serverBest: serverStats.bestOverallStreak
+                });
+            }
+
+            return hasConflict;
+        }
+
+        /**
+         * Resolve conflicts between local and server state
+         * Implements the conflict resolution rules from state-management-design.md
+         * @param {Object} localState - Current local AppState
+         * @param {Object} serverData - Server data from fetchServerData()
+         * @returns {Object} Resolved state to apply
+         */
+        function resolveConflict(localState, serverData) {
+            console.log('Resolving conflict between local and server state...');
+
+            const resolved = {
+                streak: {},
+                engagement: {}
+            };
+
+            const serverStats = serverData.streaks?.data?.stats || {};
+            const serverStreaks = serverData.streaks?.data?.streaks || [];
+            const serverProfile = serverData.profile?.data || {};
+            const serverHistory = serverData.history?.data?.history || [];
+
+            // ============================================
+            // RULE 1: Server wins for historical data (source of truth)
+            // ============================================
+            resolved.streak.history = serverStreaks.map(streak =>
+                new Date(streak.lastCompletedAt).toDateString()
+            );
+
+            // ============================================
+            // RULE 2: Higher streak value wins
+            // ============================================
+            const serverCurrentStreak = serverStats.totalCurrentStreak || 0;
+            const localCurrentStreak = localState.streak.current || 0;
+
+            resolved.streak.current = Math.max(serverCurrentStreak, localCurrentStreak);
+
+            console.log('Streak resolution: server=' + serverCurrentStreak + ', local=' + localCurrentStreak + ', resolved=' + resolved.streak.current);
+
+            // ============================================
+            // RULE 3: Most recent completion date wins
+            // ============================================
+            let serverLastDate = null;
+            if (serverStreaks.length > 0) {
+                const mostRecent = serverStreaks.reduce((latest, streak) => {
+                    const streakDate = new Date(streak.lastCompletedAt);
+                    const latestDate = latest ? new Date(latest) : new Date(0);
+                    return streakDate > latestDate ? streak.lastCompletedAt : latest;
+                }, null);
+
+                if (mostRecent) {
+                    serverLastDate = new Date(mostRecent).toDateString();
+                }
+            }
+
+            const localLastDate = localState.streak.lastCompletedDate;
+
+            if (serverLastDate && localLastDate) {
+                const serverDate = new Date(serverLastDate);
+                const localDate = new Date(localLastDate);
+                resolved.streak.lastCompletedDate = localDate > serverDate ? localLastDate : serverLastDate;
+            } else {
+                resolved.streak.lastCompletedDate = serverLastDate || localLastDate;
+            }
+
+            console.log('Last completion date resolution: server=' + serverLastDate + ', local=' + localLastDate + ', resolved=' + resolved.streak.lastCompletedDate);
+
+            // ============================================
+            // RULE 4: Higher best streak wins
+            // ============================================
+            const serverBestStreak = serverStats.bestOverallStreak || 0;
+            const localBestStreak = localState.streak.bestStreak || 0;
+
+            resolved.streak.bestStreak = Math.max(serverBestStreak, localBestStreak);
+
+            console.log('Best streak resolution: server=' + serverBestStreak + ', local=' + localBestStreak + ', resolved=' + resolved.streak.bestStreak);
+
+            // ============================================
+            // RULE 5: Merge engagement metrics (server as primary source)
+            // ============================================
+            // For total completions, use server data as it's the source of truth
+            resolved.engagement.totalCompletions = serverProfile.stats?.totalCompletions || localState.engagement.totalCompletions || 0;
+
+            // Update consecutive days to match current streak
+            resolved.engagement.consecutiveDays = resolved.streak.current;
+
+            // Keep earliest first visit
+            const localFirst = localState.engagement.firstVisit ? new Date(localState.engagement.firstVisit) : null;
+            const serverFirst = serverProfile.createdAt ? new Date(serverProfile.createdAt) : null;
+
+            if (localFirst && serverFirst) {
+                resolved.engagement.firstVisit = localFirst < serverFirst
+                    ? localState.engagement.firstVisit
+                    : serverProfile.createdAt;
+            } else {
+                resolved.engagement.firstVisit = localState.engagement.firstVisit || serverProfile.createdAt;
+            }
+
+            // Preserve local engagement tracking flags (these are client-side only)
+            resolved.engagement.lastVisit = localState.engagement.lastVisit;
+            resolved.engagement.visitCount = localState.engagement.visitCount;
+            resolved.engagement.hasSeenAuthPrompt = localState.engagement.hasSeenAuthPrompt;
+            resolved.engagement.dismissedAuthPromptCount = localState.engagement.dismissedAuthPromptCount;
+
+            console.log('Conflict resolution complete:', resolved);
+
+            return resolved;
         }
 
         // ============================================
