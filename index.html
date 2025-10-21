@@ -943,7 +943,7 @@
             async completeTask(taskDescription) {
                 return apiRequest('/user/complete', {
                     method: 'POST',
-                    body: JSON.stringify({ taskDescription })
+                    body: JSON.stringify({ taskName: taskDescription })
                 });
             },
 
@@ -2206,7 +2206,16 @@
                 console.log('Login successful!');
             } catch (error) {
                 console.error('Login error:', error);
-                showAuthError('login', error.message || 'Login failed. Please check your credentials.');
+
+                // Provide helpful error message
+                let errorMessage = error.message || 'Login failed. Please check your credentials.';
+
+                // If it's an authentication error, add helpful reminder
+                if (errorMessage.includes('Invalid') || errorMessage.includes('password') || errorMessage.includes('credentials')) {
+                    errorMessage = 'Invalid email or password. Don\'t have an account? Click "Create one" below.';
+                }
+
+                showAuthError('login', errorMessage);
             } finally {
                 // Reset button state
                 submitButton.disabled = false;
