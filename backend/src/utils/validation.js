@@ -357,7 +357,7 @@ function validateRegistrationData(body) {
 
   // Validate password confirmation
   if (body.password !== body.confirmPassword) {
-    errors.push('Password confirmation does not match password');
+    errors.push('Passwords do not match');
   }
 
   return {
