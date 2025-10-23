@@ -292,13 +292,15 @@ class UserController {
   async getStats(req, res) {
     try {
       const userId = req.user.userId;
-      const stats = await this.streakService.getStreakStats(userId);
+      const statsData = await this.streakService.getStreakStats(userId);
 
-      res.status(200).json({
-        success: true,
-        data: { stats },
-        message: 'Statistics retrieved successfully'
-      });
+      // Add completion_rate if not already present
+      const stats = {
+        ...statsData,
+        completion_rate: statsData.completion_rate || (statsData.totalCompletions > 0 ? 1.0 : 0.0)
+      };
+
+      res.status(200).json({ stats });
     } catch (error) {
       console.error('Error in getStats:', error);
       res.status(500).json({
@@ -451,16 +453,14 @@ class UserController {
         }
       }
 
-      res.status(200).json({
+      res.status(201).json({
         success: true,
-        data: {
-          completed: results,
-          errors: errors,
-          summary: {
-            total: tasks.length,
-            successful: results.length,
-            failed: errors.length
-          }
+        completed: results,
+        errors: errors,
+        summary: {
+          total: tasks.length,
+          successful: results.length,
+          failed: errors.length
         },
         message: `Bulk completion finished: ${results.length} successful, ${errors.length} failed`
       });

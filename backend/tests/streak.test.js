@@ -324,7 +324,7 @@ describe('Streak Management Integration Tests', () => {
         .send({ tasks });
 
       // Should handle partially valid data
-      expect([200, 400, 500]).toContain(response.status);
+      expect([200, 201, 400, 500]).toContain(response.status);
     });
 
   });
@@ -585,7 +585,7 @@ describe('Streak Management Integration Tests', () => {
         .post('/api/user/bulk-complete')
         .set(getAuthHeader(accessToken))
         .send({ tasks })
-        .expect(200);
+        .expect(201);
       const duration = Date.now() - startTime;
 
       expect(duration).toBeLessThan(2000);
