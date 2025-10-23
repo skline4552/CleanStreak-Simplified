@@ -129,6 +129,11 @@ async function createTestStreak(userId, streakData = {}) {
 
   const data = { ...defaultData, ...streakData };
 
+  // Map longest_streak to best_streak for test compatibility
+  if (data.longest_streak !== undefined) {
+    data.best_streak = data.longest_streak;
+  }
+
   const streak = await prisma.user_streaks.create({
     data: {
       id: createId(),
@@ -196,9 +201,27 @@ async function createCompleteTestUser(options = {}) {
 
   const authUser = await createAuthenticatedUser(userData);
   const streak = await createTestStreak(authUser.user.id, streakData);
-  const completionHistory = completions.length > 0
-    ? await createTestCompletions(authUser.user.id, completions)
-    : [];
+
+  // Create completion history records
+  let completionHistory = [];
+  if (completions.length > 0) {
+    completionHistory = await createTestCompletions(authUser.user.id, completions);
+  } else if (streakData.total_completions > 0) {
+    // Auto-generate completion history to match total_completions
+    const taskName = streakData.task_name || 'default-task';
+    const generatedCompletions = [];
+    for (let i = 0; i < streakData.total_completions; i++) {
+      const daysAgo = streakData.total_completions - i - 1;
+      const date = new Date();
+      date.setDate(date.getDate() - daysAgo);
+      generatedCompletions.push({
+        task_name: taskName,
+        completed_date: date,
+        streak_day: i + 1
+      });
+    }
+    completionHistory = await createTestCompletions(authUser.user.id, generatedCompletions);
+  }
 
   return {
     ...authUser,

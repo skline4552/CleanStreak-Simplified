@@ -35,12 +35,20 @@ class UserController {
   async getStreaks(req, res) {
     try {
       const userId = req.user.userId;
+
+      // Get streak stats which includes total completions
+      const stats = await this.streakService.getStreakStats(userId);
       const streaksData = await this.streakService.getUserStreaks(userId);
 
-      // Return streaks directly on response body (not wrapped in 'data')
-      // to match API contract expected by tests and frontend
-      // getUserStreaks returns array, but we want aggregate streak object
-      const streaks = streaksData[0] || {
+      // Get the primary streak (first one if it exists)
+      const primaryStreak = streaksData[0];
+
+      // Build response in snake_case to match API contract
+      const streaks = primaryStreak ? {
+        current_streak: primaryStreak.currentStreak,
+        longest_streak: primaryStreak.bestStreak,
+        total_completions: stats.totalCompletions
+      } : {
         current_streak: 0,
         longest_streak: 0,
         total_completions: 0
@@ -154,11 +162,17 @@ class UserController {
         notes
       );
 
-      // Return streak directly on response body (not wrapped in 'data')
-      // to match API contract expected by tests
+      // Transform to snake_case to match API contract expected by tests
+      const streak = result.streak ? {
+        current_streak: result.streak.currentStreak,
+        longest_streak: result.streak.bestStreak,
+        task_name: result.streak.taskName,
+        last_completed: result.streak.lastCompleted
+      } : result;
+
       res.status(201).json({
         success: true,
-        streak: result
+        streak
       });
     } catch (error) {
       console.error('Error in completeTask:', error);
