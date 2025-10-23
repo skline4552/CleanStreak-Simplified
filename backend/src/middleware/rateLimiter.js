@@ -15,7 +15,9 @@ const { authRateLimit } = require('../config/auth');
  */
 const createRateLimiter = (options = {}) => {
   // In test environment, significantly increase limits to prevent test interference
+  // UNLESS the limiter explicitly wants to be tested (enforceLimitsInTests: true)
   const isTestEnv = process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined;
+  const enforceLimitsInTests = options.enforceLimitsInTests === true;
 
   const defaultOptions = {
     windowMs: 15 * 60 * 1000, // 15 minutes
@@ -57,9 +59,12 @@ const createRateLimiter = (options = {}) => {
   };
 
   const mergedOptions = { ...defaultOptions, ...options };
+  // Remove the enforceLimitsInTests flag from options before passing to express-rate-limit
+  delete mergedOptions.enforceLimitsInTests;
 
   // In test environment, multiply limits by 1000 to prevent interference
-  if (isTestEnv) {
+  // UNLESS enforceLimitsInTests is true (for testing rate limiting itself)
+  if (isTestEnv && !enforceLimitsInTests) {
     mergedOptions.max = typeof mergedOptions.max === 'number'
       ? mergedOptions.max * 1000
       : 100000;
@@ -98,6 +103,7 @@ const authLimiters = {
     max: authRateLimit.login.max,
     skipSuccessfulRequests: authRateLimit.login.skipSuccessfulRequests,
     message: 'Too many login attempts, please try again later.',
+    enforceLimitsInTests: true, // Enable rate limiting in tests for security validation
     keyGenerator: (req) => {
       // Combine IP and email for login attempts
       const ip = req.ip || req.connection.remoteAddress || 'unknown';
@@ -111,7 +117,8 @@ const authLimiters = {
     windowMs: authRateLimit.register.windowMs,
     max: authRateLimit.register.max,
     skipSuccessfulRequests: authRateLimit.register.skipSuccessfulRequests,
-    message: 'Too many registration attempts, please try again later.'
+    message: 'Too many registration attempts, please try again later.',
+    enforceLimitsInTests: true // Enable rate limiting in tests for security validation
   }),
 
   // Password reset attempts

@@ -35,16 +35,18 @@ class UserController {
   async getStreaks(req, res) {
     try {
       const userId = req.user.userId;
-      const streaks = await this.streakService.getUserStreaks(userId);
+      const streaksData = await this.streakService.getUserStreaks(userId);
 
-      res.status(200).json({
-        success: true,
-        data: {
-          streaks,
-          count: streaks.length
-        },
-        message: 'Streaks retrieved successfully'
-      });
+      // Return streaks directly on response body (not wrapped in 'data')
+      // to match API contract expected by tests and frontend
+      // getUserStreaks returns array, but we want aggregate streak object
+      const streaks = streaksData[0] || {
+        current_streak: 0,
+        longest_streak: 0,
+        total_completions: 0
+      };
+
+      res.status(200).json({ streaks });
     } catch (error) {
       console.error('Error in getStreaks:', error);
       res.status(500).json({
@@ -152,10 +154,11 @@ class UserController {
         notes
       );
 
+      // Return streak directly on response body (not wrapped in 'data')
+      // to match API contract expected by tests
       res.status(201).json({
         success: true,
-        data: result,
-        message: 'Task completed successfully'
+        streak: result
       });
     } catch (error) {
       console.error('Error in completeTask:', error);
