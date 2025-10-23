@@ -26,7 +26,8 @@ const {
   generateExpiredToken,
   generateInvalidToken,
   isValidJWTStructure,
-  cleanupTestData
+  cleanupTestData,
+  wait
 } = require('./utils/testHelpers');
 const { hashPassword, comparePassword, validatePasswordStrength } = require('../src/utils/password');
 const {
@@ -145,6 +146,9 @@ describe('Authentication System Tests', () => {
           .expect(400);
 
         expect(response.body).toHaveProperty('error');
+
+        // Small delay to avoid hitting rate limits in tests
+        await wait(100);
       }
     });
 
@@ -176,6 +180,9 @@ describe('Authentication System Tests', () => {
           .expect(400);
 
         expect(response.body).toHaveProperty('error', 'Validation failed');
+
+        // Small delay to avoid hitting rate limits in tests
+        await wait(100);
       }
     });
 

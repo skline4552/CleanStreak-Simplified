@@ -55,7 +55,7 @@ const authRateLimit = {
   register: {
     windowMs: 60 * 60 * 1000, // 1 hour
     max: 3, // 3 registrations per hour per IP
-    skipSuccessfulRequests: true
+    skipFailedRequests: true // Don't count validation failures, only successful registrations
   },
 
   // Password reset attempts

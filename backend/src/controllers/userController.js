@@ -261,11 +261,7 @@ class UserController {
 
       const result = await this.streakService.getCompletionHistory(userId, options);
 
-      res.status(200).json({
-        success: true,
-        data: result,
-        message: 'History retrieved successfully'
-      });
+      res.status(200).json(result);
     } catch (error) {
       console.error('Error in getHistory:', error);
 
@@ -483,11 +479,7 @@ class UserController {
       const userId = req.user.userId;
       const summary = await this.accountService.getAccountSummary(userId);
 
-      res.status(200).json({
-        success: true,
-        data: summary,
-        message: 'Account summary retrieved successfully'
-      });
+      res.status(200).json(summary);
     } catch (error) {
       console.error('Error in getAccountSummary:', error);
       res.status(500).json({
@@ -593,7 +585,6 @@ class UserController {
 
       res.status(200).json({
         success: true,
-        data: result,
         message: 'Account deleted successfully'
       });
     } catch (error) {

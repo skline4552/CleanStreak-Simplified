@@ -68,13 +68,8 @@ const createRateLimiter = (options = {}) => {
     mergedOptions.max = typeof mergedOptions.max === 'number'
       ? mergedOptions.max * 1000
       : 100000;
-  } else if (isTestEnv && enforceLimitsInTests) {
-    // When testing rate limits, use a moderate multiplier (5x) to allow
-    // validation tests to pass while still triggering rate limits in security tests
-    mergedOptions.max = typeof mergedOptions.max === 'number'
-      ? mergedOptions.max * 5
-      : 50;
   }
+  // When enforceLimitsInTests is true, use the original limits for security testing
 
   return rateLimit(mergedOptions);
 };
