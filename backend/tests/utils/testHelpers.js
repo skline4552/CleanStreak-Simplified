@@ -134,6 +134,11 @@ async function createTestStreak(userId, streakData = {}) {
     data.best_streak = data.longest_streak;
   }
 
+  // Map last_completed_date to last_completed for test compatibility
+  if (data.last_completed_date !== undefined) {
+    data.last_completed = new Date(data.last_completed_date);
+  }
+
   const streak = await prisma.user_streaks.create({
     data: {
       id: createId(),
@@ -225,11 +230,18 @@ async function createCompleteTestUser(options = {}) {
   } else if (streakData.total_completions > 0) {
     // Auto-generate completion history to match total_completions
     const taskName = streakData.task_name || 'default-task';
+
+    // Use last_completed_date if provided, otherwise default to yesterday
+    // to avoid conflicts with tests that want to complete tasks today
+    const lastDate = streakData.last_completed_date
+      ? new Date(streakData.last_completed_date)
+      : new Date(new Date().setDate(new Date().getDate() - 1));
+
     const generatedCompletions = [];
     for (let i = 0; i < streakData.total_completions; i++) {
-      const daysAgo = streakData.total_completions - i - 1;
-      const date = new Date();
-      date.setDate(date.getDate() - daysAgo);
+      const daysBeforeLastDate = streakData.total_completions - i - 1;
+      const date = new Date(lastDate);
+      date.setDate(date.getDate() - daysBeforeLastDate);
       generatedCompletions.push({
         task_name: taskName,
         completed_date: date,

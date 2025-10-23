@@ -176,7 +176,13 @@ describe('Streak Management Integration Tests', () => {
       });
 
       expect(streak).toBeTruthy();
-      expect(streak.total_completions).toBeGreaterThanOrEqual(1);
+      expect(streak.current_streak).toBeGreaterThanOrEqual(1);
+
+      // Verify completion history was recorded
+      const completionCount = await prisma.completion_history.count({
+        where: { user_id: user.id }
+      });
+      expect(completionCount).toBeGreaterThanOrEqual(1);
     });
 
     test('should break streak if completion is after gap', async () => {
