@@ -82,9 +82,9 @@ class UserController {
         });
       }
 
-      const streak = await this.streakService.getUserStreak(userId, taskName);
+      const streakData = await this.streakService.getUserStreak(userId, taskName);
 
-      if (!streak) {
+      if (!streakData) {
         return res.status(404).json({
           error: 'Not found',
           code: 'STREAK_NOT_FOUND',
@@ -92,11 +92,18 @@ class UserController {
         });
       }
 
-      res.status(200).json({
-        success: true,
-        data: { streak },
-        message: 'Streak retrieved successfully'
-      });
+      // Transform to snake_case to match API contract
+      const streak = {
+        id: streakData.id,
+        task: streakData.taskName,
+        current_streak: streakData.currentStreak,
+        best_streak: streakData.bestStreak,
+        last_completed: streakData.lastCompleted,
+        created_at: streakData.createdAt,
+        updated_at: streakData.updatedAt
+      };
+
+      res.status(200).json({ streak });
     } catch (error) {
       console.error('Error in getStreak:', error);
 

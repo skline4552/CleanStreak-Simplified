@@ -169,6 +169,22 @@ async function createTestCompletions(userId, completions = []) {
 
   for (const completion of completions) {
     const data = { ...defaultCompletion, ...completion };
+
+    // Map task_completed to task_name for backward compatibility
+    if (data.task_completed !== undefined && data.task_name === defaultCompletion.task_name) {
+      data.task_name = data.task_completed;
+    }
+
+    // Map completion_date to completed_date for backward compatibility
+    if (data.completion_date !== undefined && !data.completed_date) {
+      data.completed_date = data.completion_date;
+    }
+
+    // Ensure completed_date is always set
+    if (!data.completed_date) {
+      data.completed_date = new Date();
+    }
+
     const created = await prisma.completion_history.create({
       data: {
         id: createId(),

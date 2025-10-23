@@ -88,6 +88,7 @@ describe('Streak Management Integration Tests', () => {
       const { user, accessToken } = await createAuthenticatedUser();
 
       await createTestStreak(user.id, {
+        task_name: 'Clean kitchen',
         current_streak: 5,
         last_completed_date: getISODate()
       });
@@ -123,6 +124,7 @@ describe('Streak Management Integration Tests', () => {
     test('should complete a task and update streak', async () => {
       const testData = await createCompleteTestUser({
         streakData: {
+          task_name: 'Clean bathroom',
           current_streak: 5,
           longest_streak: 10,
           total_completions: 20,
@@ -147,8 +149,7 @@ describe('Streak Management Integration Tests', () => {
       const completion = await prisma.completion_history.findFirst({
         where: {
           user_id: testData.user.id,
-          task_completed: 'Clean bathroom',
-          completion_date: getISODate()
+          task_name: 'Clean bathroom'
         }
       });
 
