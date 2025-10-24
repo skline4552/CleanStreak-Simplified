@@ -333,8 +333,8 @@ describe('Performance Testing Suite', () => {
         .expect(200);
       const duration = Date.now() - startTime;
 
-      // Response is {success, data: {completions, pagination}, message}
-      expect(response.body.data.pagination.total).toBe(100);
+      // Response is {history, pagination}
+      expect(response.body.pagination.total).toBe(100);
       expect(duration).toBeLessThan(500);
     });
 
@@ -356,8 +356,8 @@ describe('Performance Testing Suite', () => {
         const duration = Date.now() - startTime;
 
         expect(duration).toBeLessThan(500);
-        // Response is {success, data: {completions, pagination}, message}
-        expect(response.body.data.completions.length).toBeLessThanOrEqual(50);
+        // Response is {history, pagination}
+        expect(response.body.history.length).toBeLessThanOrEqual(50);
 
         // Small delay to avoid rate limiting
         await wait(100);
