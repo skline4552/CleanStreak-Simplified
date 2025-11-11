@@ -112,6 +112,7 @@ model user_rooms {
 
   @@index([user_id])
   @@index([user_id, sort_order])
+  @@index([user_id, is_active])
 }
 
 model user_keystone_tasks {
