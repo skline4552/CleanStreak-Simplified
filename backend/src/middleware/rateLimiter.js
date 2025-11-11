@@ -117,9 +117,19 @@ const authLimiters = {
   register: createRateLimiter({
     windowMs: authRateLimit.register.windowMs,
     max: authRateLimit.register.max,
-    skipSuccessfulRequests: authRateLimit.register.skipSuccessfulRequests,
+    skipFailedRequests: authRateLimit.register.skipFailedRequests,
     message: 'Too many registration attempts, please try again later.',
-    enforceLimitsInTests: true // Enable rate limiting in tests for security validation
+    // Note: enforceLimitsInTests removed - validation tests need freedom to test multiple scenarios
+    // Security tests should use registerStrict for actual rate limit validation
+  }),
+
+  // Strict registration rate limiter for security testing
+  registerStrict: createRateLimiter({
+    windowMs: authRateLimit.register.windowMs,
+    max: authRateLimit.register.max,
+    skipFailedRequests: authRateLimit.register.skipFailedRequests,
+    message: 'Too many registration attempts, please try again later.',
+    enforceLimitsInTests: true // Enforce actual limits for security validation
   }),
 
   // Password reset attempts
@@ -188,6 +198,17 @@ const userLimiters = {
     keyGenerator: (req) => {
       const userId = req.user?.userId || 'anonymous';
       return `data-${userId}`;
+    }
+  }),
+
+  // Room configuration operations (create, update, delete, reorder)
+  roomConfig: createRateLimiter({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 20, // 20 room config operations per 15 minutes
+    message: 'Too many room configuration requests, please try again later.',
+    keyGenerator: (req) => {
+      const userId = req.user?.userId || 'anonymous';
+      return `room-config-${userId}`;
     }
   })
 };
