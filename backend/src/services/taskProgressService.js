@@ -1,5 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
-const { v4: uuidv4 } = require('uuid');
+const { createId } = require('@paralleldrive/cuid2');
 const TaskGenerationService = require('./taskGenerationService');
 const RoomService = require('./roomService');
 const KeystoneService = require('./keystoneService');
@@ -64,7 +64,7 @@ class TaskProgressService {
   async initializeProgress(userId, rotationVersion = 1) {
     const progress = await this.prisma.user_task_progress.create({
       data: {
-        id: uuidv4(),
+        id: createId(),
         user_id: userId,
         current_task_index: 1,
         current_rotation_version: rotationVersion,
@@ -221,7 +221,7 @@ class TaskProgressService {
       // Create new
       await this.prisma.pending_room_configs.create({
         data: {
-          id: uuidv4(),
+          id: createId(),
           user_id: userId,
           config_data: JSON.stringify(sanitized)
         }

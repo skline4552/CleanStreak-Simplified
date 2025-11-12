@@ -1,5 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
-const { v4: uuidv4 } = require('uuid');
+const { createId } = require('@paralleldrive/cuid2');
 
 /**
  * Keystone Service
@@ -42,7 +42,7 @@ class KeystoneService {
 
     // Create all default keystones
     const keystones = this.defaultKeystones.map((taskType, index) => ({
-      id: uuidv4(),
+      id: createId(),
       user_id: userId,
       task_type: taskType,
       custom_name: null,

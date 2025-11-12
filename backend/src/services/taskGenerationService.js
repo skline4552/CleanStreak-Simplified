@@ -1,5 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
-const { v4: uuidv4 } = require('uuid');
+const { createId } = require('@paralleldrive/cuid2');
 const RoomService = require('./roomService');
 const KeystoneService = require('./keystoneService');
 const TaskTemplateService = require('./taskTemplateService');
@@ -188,7 +188,7 @@ class TaskGenerationService {
     // Build task records for database
     const taskRecords = taskArray.map(task => {
       const record = {
-        id: uuidv4(),
+        id: createId(),
         user_id: userId,
         task_type: task.type,
         task_description: task.description,

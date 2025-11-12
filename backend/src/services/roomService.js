@@ -1,5 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
-const { v4: uuidv4 } = require('uuid');
+const { createId } = require('@paralleldrive/cuid2');
 const TaskTemplateService = require('./taskTemplateService');
 
 /**
@@ -58,7 +58,7 @@ class RoomService {
     // Create room
     const room = await this.prisma.user_rooms.create({
       data: {
-        id: uuidv4(),
+        id: createId(),
         user_id: userId,
         room_type: roomType,
         custom_name: customName.trim(),

@@ -58,6 +58,9 @@ app.use('/api/', generalLimiter);
 // Import route modules
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/user');
+const roomRoutes = require('./routes/rooms');
+const keystoneRoutes = require('./routes/keystones');
+const taskRoutes = require('./routes/tasks');
 
 // API routes with enhanced security
 // Authentication routes with specific rate limiting
@@ -72,6 +75,11 @@ app.use('/api/user/export', userLimiters.dataExport);
 app.use('/api/user/account', userLimiters.accountDeletion);
 app.use('/api/user', userLimiters.dataRetrieval);
 app.use('/api/user', userRoutes);
+
+// Room customization routes
+app.use('/api/rooms', roomRoutes);
+app.use('/api/keystone-tasks', keystoneRoutes);
+app.use('/api/tasks', taskRoutes);
 
 // 404 handler for unmatched routes
 app.use('*', notFoundHandler);

@@ -1,0 +1,243 @@
+const { prisma } = require('../config/prisma');
+const TaskProgressService = require('../services/taskProgressService');
+const TaskGenerationService = require('../services/taskGenerationService');
+const RoomService = require('../services/roomService');
+
+class TaskController {
+  /**
+   * Get the current task from rotation
+   * GET /api/tasks/current
+   */
+  static async getCurrentTask(req, res) {
+    try {
+      const { userId } = req.user;
+
+      // Check if user has configured rooms
+      const hasRooms = await RoomService.hasConfiguredRooms(userId);
+
+      if (!hasRooms) {
+        return res.status(200).json({
+          task: null,
+          message: 'No rooms configured. Please configure your home to get personalized tasks.'
+        });
+      }
+
+      // Get current task from rotation
+      const task = await TaskProgressService.getCurrentTask(userId);
+
+      if (!task) {
+        return res.status(200).json({
+          task: null,
+          message: 'No task rotation found. Please configure your rooms.'
+        });
+      }
+
+      // Get progress information
+      const progress = await TaskProgressService.getProgress(userId);
+
+      // Get total tasks in current rotation
+      const totalTasks = await prisma.task_rotation.count({
+        where: {
+          user_id: userId,
+          rotation_version: progress.current_rotation_version
+        }
+      });
+
+      // Get room information if it's a pillar task
+      let roomInfo = null;
+      if (task.room_id) {
+        const room = await prisma.user_rooms.findUnique({
+          where: { id: task.room_id },
+          select: {
+            id: true,
+            custom_name: true,
+            room_type: true
+          }
+        });
+        roomInfo = room ? {
+          id: room.id,
+          name: room.custom_name,
+          type: room.room_type
+        } : null;
+      }
+
+      // Format response
+      const response = {
+        id: task.id,
+        description: task.task_description,
+        task_type: task.task_type,
+        room: roomInfo,
+        pillar_type: task.pillar_type,
+        keystone_type: task.keystone_type,
+        position: task.sequence_position,
+        total_tasks: totalTasks
+      };
+
+      res.status(200).json({
+        task: response
+      });
+
+    } catch (error) {
+      console.error('Get current task error:', error);
+      res.status(500).json({
+        error: 'Internal server error',
+        message: 'Failed to retrieve current task. Please try again.'
+      });
+    }
+  }
+
+  /**
+   * Preview upcoming tasks in rotation
+   * GET /api/tasks/preview?limit=20
+   */
+  static async previewTasks(req, res) {
+    try {
+      const { userId } = req.user;
+      const limit = Math.min(parseInt(req.query.limit, 10) || 20, 50);
+
+      // Check if user has configured rooms
+      const hasRooms = await RoomService.hasConfiguredRooms(userId);
+
+      if (!hasRooms) {
+        return res.status(200).json({
+          tasks: [],
+          current_position: 0,
+          total_tasks: 0,
+          message: 'No rooms configured'
+        });
+      }
+
+      // Get progress information
+      const progress = await TaskProgressService.getProgress(userId);
+
+      if (!progress) {
+        return res.status(200).json({
+          tasks: [],
+          current_position: 0,
+          total_tasks: 0,
+          message: 'No rotation found'
+        });
+      }
+
+      // Get upcoming tasks
+      const tasks = await prisma.task_rotation.findMany({
+        where: {
+          user_id: userId,
+          rotation_version: progress.current_rotation_version,
+          sequence_position: {
+            gte: progress.current_task_index
+          }
+        },
+        orderBy: {
+          sequence_position: 'asc'
+        },
+        take: limit,
+        include: {
+          user_rooms: {
+            select: {
+              id: true,
+              custom_name: true,
+              room_type: true
+            }
+          }
+        }
+      });
+
+      // Get total tasks count
+      const totalTasks = await prisma.task_rotation.count({
+        where: {
+          user_id: userId,
+          rotation_version: progress.current_rotation_version
+        }
+      });
+
+      // Format tasks
+      const formattedTasks = tasks.map(task => ({
+        description: task.task_description,
+        task_type: task.task_type,
+        room: task.user_rooms ? {
+          id: task.user_rooms.id,
+          name: task.user_rooms.custom_name,
+          type: task.user_rooms.room_type
+        } : null,
+        pillar_type: task.pillar_type,
+        keystone_type: task.keystone_type,
+        position: task.sequence_position
+      }));
+
+      res.status(200).json({
+        tasks: formattedTasks,
+        current_position: progress.current_task_index,
+        total_tasks: totalTasks
+      });
+
+    } catch (error) {
+      console.error('Preview tasks error:', error);
+      res.status(500).json({
+        error: 'Internal server error',
+        message: 'Failed to preview tasks. Please try again.'
+      });
+    }
+  }
+
+  /**
+   * Force regeneration of task rotation (admin/debug)
+   * POST /api/tasks/regenerate
+   */
+  static async regenerateRotation(req, res) {
+    try {
+      const { userId } = req.user;
+
+      // Check if user has configured rooms
+      const hasRooms = await RoomService.hasConfiguredRooms(userId);
+
+      if (!hasRooms) {
+        return res.status(400).json({
+          error: 'No rooms configured',
+          message: 'Please configure at least one room before generating a task rotation.'
+        });
+      }
+
+      // Generate new rotation
+      const rotation = await TaskGenerationService.generateRotation(userId, false);
+
+      // Update progress to point to new rotation
+      await prisma.user_task_progress.upsert({
+        where: { user_id: userId },
+        update: {
+          current_task_index: 1,
+          current_rotation_version: rotation.version,
+          rotation_generated_at: rotation.generated_at,
+          has_pending_config_changes: false
+        },
+        create: {
+          id: require('@paralleldrive/cuid2').createId(),
+          user_id: userId,
+          current_task_index: 1,
+          current_rotation_version: rotation.version,
+          rotation_generated_at: rotation.generated_at,
+          has_pending_config_changes: false
+        }
+      });
+
+      res.status(200).json({
+        success: true,
+        rotation: {
+          version: rotation.version,
+          total_tasks: rotation.total_tasks,
+          generated_at: rotation.generated_at
+        },
+        message: 'Task rotation regenerated successfully'
+      });
+
+    } catch (error) {
+      console.error('Regenerate rotation error:', error);
+      res.status(500).json({
+        error: 'Internal server error',
+        message: 'Failed to regenerate rotation. Please try again.'
+      });
+    }
+  }
+}
+
+module.exports = TaskController;
