@@ -122,6 +122,90 @@
             line-height: 1.4;
         }
 
+        /* Task Progress Styles */
+        #taskProgress {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s ease;
+            border-radius: 4px;
+        }
+
+        .progress-text {
+            font-size: 0.85rem;
+            color: #6c757d;
+            text-align: center;
+            margin: 0;
+        }
+
+        /* Task Context Badge Styles */
+        #taskContext {
+            margin-top: 15px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: capitalize;
+        }
+
+        .badge.pillar {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .badge.keystone {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+
+        /* Legacy Prompt Styles */
+        #legacyPrompt {
+            margin-top: 15px;
+        }
+
+        .info-box {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 8px;
+            padding: 12px 15px;
+            font-size: 0.9rem;
+            color: #856404;
+            line-height: 1.5;
+            margin: 0;
+        }
+
+        .info-box strong {
+            color: #533f03;
+        }
+
+        .info-box a {
+            color: #0056b3;
+            text-decoration: underline;
+            font-weight: 600;
+        }
+
+        .info-box a:hover {
+            color: #003d82;
+        }
+
         .streak-counter {
             margin-bottom: 30px;
             padding: 15px;
@@ -1407,7 +1491,32 @@
         <h1>Daily Clean</h1>
 
         <div class="task-card">
+            <!-- Progress indicator (only for configured users) -->
+            <div id="taskProgress" style="display: none;">
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 0%"></div>
+                </div>
+                <p class="progress-text">
+                    Task <strong id="currentPosition">1</strong> of
+                    <strong id="totalTasks">28</strong>
+                </p>
+            </div>
+
+            <!-- Task description -->
             <div class="task-text" id="taskText"></div>
+
+            <!-- Context badge (only for rotation tasks) -->
+            <div id="taskContext" style="display: none;">
+                <span id="taskBadge" class="badge"></span>
+            </div>
+
+            <!-- Legacy user prompt -->
+            <div id="legacyPrompt" style="display: none;">
+                <p class="info-box">
+                    💡 <strong>Personalize your tasks!</strong>
+                    <a href="#" onclick="openSettingsModal(); return false;">Configure your home</a> to get room-specific tasks.
+                </p>
+            </div>
         </div>
 
         <div class="streak-counter">
@@ -2085,17 +2194,21 @@
                 history: [] // Array of completion date objects
             },
 
-            // Current task
+            // Current task (legacy format)
             task: {
                 text: "",
                 date: null,
                 completed: false
             },
 
+            // Current task (rotation-based format)
+            currentTask: null, // { id, description, taskType, room, pillarType, keystoneType, position, totalTasks, isLegacy }
+
             // User authentication state
             user: {
                 isAuthenticated: false,
-                profile: null // { id, email, createdAt, preferences }
+                profile: null, // { id, email, createdAt, preferences }
+                hasConfiguredRooms: false // Whether user has set up room customization
             },
 
             // Sync state
@@ -2998,25 +3111,130 @@
             return cleaningTasks[(dayOfMonth - 1) % cleaningTasks.length];
         }
 
+        /**
+         * Get legacy task for users without room configuration
+         * Uses day-of-month rotation for backward compatibility
+         */
+        function getLegacyTask() {
+            const today = new Date();
+            const dayOfMonth = today.getDate();
+            const taskDescription = cleaningTasks[(dayOfMonth - 1) % cleaningTasks.length];
+
+            return {
+                description: taskDescription,
+                isLegacy: true
+            };
+        }
+
+        /**
+         * Fetch current task from rotation API or fallback to legacy
+         * @returns {Promise<object>} Current task object
+         */
+        async function fetchCurrentTask() {
+            try {
+                // Check if user has configured rooms
+                if (!AppState.user.hasConfiguredRooms) {
+                    // Fallback to legacy system
+                    return getLegacyTask();
+                }
+
+                // Fetch from rotation
+                const response = await TaskAPI.getCurrentTask();
+
+                if (response.task) {
+                    // Cache in AppState
+                    AppState.currentTask = {
+                        id: response.task.id,
+                        description: response.task.description,
+                        taskType: response.task.task_type,
+                        room: response.task.room,
+                        pillarType: response.task.pillar_type,
+                        keystoneType: response.task.keystone_type,
+                        position: response.task.position,
+                        totalTasks: response.task.total_tasks
+                    };
+
+                    return AppState.currentTask;
+                }
+            } catch (error) {
+                console.error('Failed to fetch current task:', error);
+
+                // Fallback to legacy
+                return getLegacyTask();
+            }
+        }
+
         function getTodayString() {
             const today = new Date();
             return today.toDateString();
         }
 
-        function updateDisplay() {
-            const todaysTask = getTodaysTask();
+        /**
+         * Helper function to capitalize first letter
+         */
+        function capitalizeFirst(str) {
+            if (!str) return '';
+            return str.charAt(0).toUpperCase() + str.slice(1);
+        }
+
+        /**
+         * Display current task with progress indicators and badges
+         * Handles both rotation-based and legacy tasks
+         */
+        function displayCurrentTask() {
+            const task = AppState.currentTask;
+
+            if (!task) return;
+
+            // Update description
+            document.getElementById('taskText').textContent = task.description;
+
+            if (task.isLegacy) {
+                // Legacy mode
+                document.getElementById('taskProgress').style.display = 'none';
+                document.getElementById('taskContext').style.display = 'none';
+                document.getElementById('legacyPrompt').style.display = 'block';
+            } else {
+                // Rotation mode
+                document.getElementById('taskProgress').style.display = 'block';
+                document.getElementById('legacyPrompt').style.display = 'none';
+
+                // Update progress
+                const percentage = (task.position / task.totalTasks) * 100;
+                document.querySelector('.progress-fill').style.width = `${percentage}%`;
+                document.getElementById('currentPosition').textContent = task.position;
+                document.getElementById('totalTasks').textContent = task.totalTasks;
+
+                // Update context badge
+                const badge = document.getElementById('taskBadge');
+                if (task.taskType === 'pillar') {
+                    badge.textContent = `${task.room.name} - ${capitalizeFirst(task.pillarType)}`;
+                    badge.className = 'badge pillar';
+                } else {
+                    badge.textContent = 'Keystone Task';
+                    badge.className = 'badge keystone';
+                }
+                document.getElementById('taskContext').style.display = 'block';
+            }
+        }
+
+        async function updateDisplay() {
             const todayString = getTodayString();
 
-            document.getElementById('taskText').textContent = todaysTask;
+            // Fetch and display current task
+            const task = await fetchCurrentTask();
+            AppState.currentTask = task;
+            displayCurrentTask();
 
-            if (lastCompletedDate === todayString) {
-                document.getElementById('streakText').textContent = `🔥 Current streak: ${currentStreak} days`;
+            // Update streak display
+            if (AppState.streak.lastCompletedDate === todayString) {
+                document.getElementById('streakText').textContent = `🔥 Current streak: ${AppState.streak.current} days`;
                 document.getElementById('doneButton').textContent = 'Completed!';
                 document.getElementById('doneButton').classList.add('completed');
                 document.getElementById('doneButton').disabled = true;
                 document.getElementById('completedMessage').style.display = 'block';
             } else {
-                document.getElementById('streakText').textContent = `🔥 Current streak: ${currentStreak} days`;
+                document.getElementById('streakText').textContent = `🔥 Current streak: ${AppState.streak.current} days`;
                 document.getElementById('doneButton').textContent = 'Done!';
                 document.getElementById('doneButton').classList.remove('completed');
                 document.getElementById('doneButton').disabled = false;
@@ -3025,71 +3243,148 @@
         }
 
         async function completeTask() {
+            const task = AppState.currentTask;
             const todayString = getTodayString();
+
+            if (!task) {
+                showNotification('No task to complete', 'error');
+                return;
+            }
 
             if (AppState.streak.lastCompletedDate === todayString) {
                 return;
             }
 
-            const yesterday = new Date();
-            yesterday.setDate(yesterday.getDate() - 1);
-            const yesterdayString = yesterday.toDateString();
+            try {
+                // Animation
+                document.querySelector('.container').classList.add('completion-animation');
+                setTimeout(() => {
+                    document.querySelector('.container').classList.remove('completion-animation');
+                }, 600);
 
-            if (AppState.streak.lastCompletedDate === yesterdayString || AppState.streak.current === 0) {
-                AppState.streak.current++;
-            } else {
-                AppState.streak.current = 1;
-            }
+                // Prepare completion data
+                const completionData = {
+                    taskName: task.description,
+                    completionDate: new Date().toISOString().split('T')[0],
+                    notes: '',
+                    task_rotation_id: task.isLegacy ? null : task.id
+                };
 
-            AppState.streak.lastCompletedDate = todayString;
+                // If authenticated, save to server
+                if (AppState.user.isAuthenticated) {
+                    try {
+                        const response = await UserAPI.completeTask(completionData.taskName);
 
-            // Update engagement tracking
-            AppState.engagement.totalCompletions++;
-            AppState.engagement.consecutiveDays = AppState.streak.current;
+                        if (response.success) {
+                            // Update streak from server response
+                            AppState.streak.current = response.streak.current_streak;
+                            AppState.streak.bestStreak = response.streak.longest_streak;
+                            AppState.streak.lastCompletedDate = todayString;
 
-            // Update best streak
-            if (AppState.streak.current > AppState.streak.bestStreak) {
-                AppState.streak.bestStreak = AppState.streak.current;
-            }
+                            // Update engagement tracking
+                            AppState.engagement.totalCompletions++;
+                            AppState.engagement.consecutiveDays = AppState.streak.current;
 
-            // Animation
-            document.querySelector('.container').classList.add('completion-animation');
-            setTimeout(() => {
-                document.querySelector('.container').classList.remove('completion-animation');
-            }, 600);
+                            // If rotation-based, load next task
+                            if (response.next_task) {
+                                AppState.currentTask = {
+                                    id: response.next_task.id,
+                                    description: response.next_task.description,
+                                    taskType: response.next_task.task_type,
+                                    room: response.next_task.room,
+                                    pillarType: response.next_task.pillar_type,
+                                    keystoneType: response.next_task.keystone_type,
+                                    position: response.next_task.position,
+                                    totalTasks: response.next_task.total_tasks
+                                };
+                                displayCurrentTask();
+                                showNotification(`Great job! Next: ${response.next_task.description}`, 'success', 5000);
+                            } else {
+                                // Legacy mode - will change tomorrow
+                                showNotification('Task completed! See you tomorrow.', 'success', 4000);
+                            }
 
-            // Save to localStorage
-            saveState();
+                            // Save to localStorage
+                            saveState();
 
-            // If authenticated, also save to server
-            if (AppState.user.isAuthenticated) {
-                try {
-                    const taskText = getTodaysTask();
-                    await UserAPI.completeTask(taskText);
-                    await syncWithServer(); // Sync to get latest data
-                } catch (error) {
-                    console.error('Error saving to server:', error);
-                    // Queue for offline sync
-                    AppState.sync.offlineQueue.push({
-                        action: 'COMPLETE_TASK',
-                        payload: { taskDescription: getTodaysTask(), date: todayString },
-                        timestamp: new Date().toISOString(),
-                        retryCount: 0
-                    });
+                            // Update display
+                            updateDisplay();
+                        }
+                    } catch (error) {
+                        console.error('Error saving to server:', error);
 
-                    // Update sync queue indicator
-                    updateSyncQueueIndicator();
+                        // Fallback to local completion
+                        const yesterday = new Date();
+                        yesterday.setDate(yesterday.getDate() - 1);
+                        const yesterdayString = yesterday.toDateString();
 
-                    // Show notification about queued action
-                    if (!AppState.network.isOnline) {
-                        showNotification('Task saved locally. Will sync when online.', 'info', 4000);
-                    } else {
-                        showNotification('Sync failed. Task queued for retry.', 'warning', 4000);
+                        if (AppState.streak.lastCompletedDate === yesterdayString || AppState.streak.current === 0) {
+                            AppState.streak.current++;
+                        } else {
+                            AppState.streak.current = 1;
+                        }
+
+                        AppState.streak.lastCompletedDate = todayString;
+
+                        // Update engagement tracking
+                        AppState.engagement.totalCompletions++;
+                        AppState.engagement.consecutiveDays = AppState.streak.current;
+
+                        if (AppState.streak.current > AppState.streak.bestStreak) {
+                            AppState.streak.bestStreak = AppState.streak.current;
+                        }
+
+                        // Queue for offline sync
+                        AppState.sync.offlineQueue.push({
+                            action: 'COMPLETE_TASK',
+                            payload: completionData,
+                            timestamp: new Date().toISOString(),
+                            retryCount: 0
+                        });
+
+                        // Update sync queue indicator
+                        updateSyncQueueIndicator();
+
+                        // Show notification about queued action
+                        if (!AppState.network.isOnline) {
+                            showNotification('Task saved locally. Will sync when online.', 'info', 4000);
+                        } else {
+                            showNotification('Sync failed. Task queued for retry.', 'warning', 4000);
+                        }
+
+                        saveState();
+                        updateDisplay();
                     }
-                }
-            }
+                } else {
+                    // Anonymous mode - local storage only
+                    const yesterday = new Date();
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    const yesterdayString = yesterday.toDateString();
 
-            updateDisplay();
+                    if (AppState.streak.lastCompletedDate === yesterdayString || AppState.streak.current === 0) {
+                        AppState.streak.current++;
+                    } else {
+                        AppState.streak.current = 1;
+                    }
+
+                    AppState.streak.lastCompletedDate = todayString;
+
+                    // Update engagement tracking
+                    AppState.engagement.totalCompletions++;
+                    AppState.engagement.consecutiveDays = AppState.streak.current;
+
+                    if (AppState.streak.current > AppState.streak.bestStreak) {
+                        AppState.streak.bestStreak = AppState.streak.current;
+                    }
+
+                    saveState();
+                    updateDisplay();
+                    showNotification('Task completed!', 'success', 3000);
+                }
+            } catch (error) {
+                console.error('Error completing task:', error);
+                showNotification('Failed to complete task. Please try again.', 'error', 4000);
+            }
         }
 
         // ============================================
