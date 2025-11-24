@@ -206,6 +206,76 @@
             color: #003d82;
         }
 
+        /* Migration Banner Styles (Phase 7) */
+        #migrationBanner {
+            margin-bottom: 20px;
+        }
+
+        .banner {
+            position: relative;
+            border-radius: 8px;
+            padding: 12px 40px 12px 15px;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .banner.info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+
+        .banner.info strong {
+            color: #062c33;
+        }
+
+        .banner.info a {
+            color: #0056b3;
+            text-decoration: underline;
+            font-weight: 600;
+        }
+
+        .banner.info a:hover {
+            color: #003d82;
+        }
+
+        .banner-close {
+            position: absolute;
+            top: 50%;
+            right: 12px;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            line-height: 1;
+            color: #0c5460;
+            cursor: pointer;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .banner-close:hover {
+            color: #062c33;
+            transform: translateY(-50%) scale(1.1);
+        }
+
         .streak-counter {
             margin-bottom: 30px;
             padding: 15px;
@@ -1485,6 +1555,20 @@
                 <button class="header-button" id="settingsButton" style="display: none;">Settings</button>
                 <button class="header-button" id="loginButton">Sign In</button>
                 <button class="header-button secondary" id="logoutButton" style="display: none;">Sign Out</button>
+            </div>
+        </div>
+
+        <!-- Migration Banner (Phase 7: for existing users without room configuration) -->
+        <div id="migrationBanner" style="display: none;">
+            <div class="banner info">
+                <p>
+                    <strong>✨ New Feature!</strong>
+                    Get personalized cleaning tasks based on your home setup.
+                    <a href="#" onclick="openSettingsModal(); return false;">
+                        Configure your rooms now
+                    </a>
+                </p>
+                <button class="banner-close" onclick="dismissMigrationBanner()">×</button>
             </div>
         </div>
 
@@ -3181,6 +3265,41 @@
          * Display current task with progress indicators and badges
          * Handles both rotation-based and legacy tasks
          */
+        /**
+         * Phase 7: Check migration status and show banner for users without rooms
+         * Called after user authentication is verified
+         */
+        async function checkMigrationStatus() {
+            if (!AppState.user.isAuthenticated) return;
+
+            // Check if banner was previously dismissed
+            const dismissed = localStorage.getItem('migration_banner_dismissed');
+            if (dismissed === 'true') return;
+
+            try {
+                const roomsResponse = await RoomAPI.getUserRooms();
+
+                if (roomsResponse.rooms.length === 0) {
+                    // User has no rooms - show banner
+                    document.getElementById('migrationBanner').style.display = 'block';
+                    AppState.user.hasConfiguredRooms = false;
+                } else {
+                    AppState.user.hasConfiguredRooms = true;
+                }
+            } catch (error) {
+                console.error('Failed to check migration status:', error);
+            }
+        }
+
+        /**
+         * Phase 7: Dismiss migration banner
+         * Hides banner and stores dismissal in localStorage
+         */
+        function dismissMigrationBanner() {
+            document.getElementById('migrationBanner').style.display = 'none';
+            localStorage.setItem('migration_banner_dismissed', 'true');
+        }
+
         function displayCurrentTask() {
             const task = AppState.currentTask;
 
@@ -4233,6 +4352,9 @@
                 updateConnectionStatus();
                 updateSyncQueueIndicator();
 
+                // Phase 7: Check migration status and show banner if needed
+                await checkMigrationStatus();
+
                 // Hide modal
                 hideAuthModal();
 
@@ -4333,6 +4455,8 @@
         if (AppState.user.isAuthenticated) {
             startBackgroundSync();
             startConnectivityMonitoring();
+            // Phase 7: Check migration status on app load
+            checkMigrationStatus();
         }
 
         // Network status monitoring with enhanced offline handling

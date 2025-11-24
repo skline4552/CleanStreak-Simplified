@@ -78,15 +78,64 @@ class TaskProgressService {
 
   /**
    * Get current task for a user
+   * Handles migration detection for backward compatibility:
+   * - Returns null if user has not configured rooms (frontend uses legacy mode)
+   * - Auto-initializes progress for first-time users with rooms
+   * - Auto-generates rotation if needed
    * @param {string} userId - User ID
    * @returns {Promise<Object|null>} Current task object or null
    */
   async getCurrentTask(userId) {
-    const progress = await this.getProgress(userId);
-    if (!progress) {
-      throw new Error('User progress not initialized');
+    // Check if user has configured rooms (Phase 7: Migration Detection)
+    const hasRooms = await this.roomService.hasConfiguredRooms(userId);
+
+    if (!hasRooms) {
+      // User hasn't configured rooms - return null (frontend uses legacy mode)
+      return null;
     }
 
+    // Check if rotation exists
+    let progress = await this.getProgress(userId);
+
+    if (!progress) {
+      // First time with rooms - initialize progress tracker
+      progress = await this.prisma.user_task_progress.create({
+        data: {
+          id: createId(),
+          user_id: userId,
+          current_task_index: 1,
+          current_rotation_version: 0,
+          rotation_generated_at: new Date(),
+          has_pending_config_changes: false
+        }
+      });
+    }
+
+    // Check if rotation generated
+    const rotationExists = await this.prisma.task_rotation.count({
+      where: {
+        user_id: userId,
+        rotation_version: progress.current_rotation_version
+      }
+    });
+
+    if (rotationExists === 0) {
+      // Generate initial rotation
+      const newRotation = await this.taskGenerationService.generateRotation(userId, false);
+
+      await this.prisma.user_task_progress.update({
+        where: { user_id: userId },
+        data: {
+          current_rotation_version: newRotation.version,
+          rotation_generated_at: newRotation.generated_at
+        }
+      });
+
+      // Update progress reference
+      progress = await this.getProgress(userId);
+    }
+
+    // Fetch current task from rotation
     const task = await this.prisma.task_rotation.findFirst({
       where: {
         user_id: userId,
