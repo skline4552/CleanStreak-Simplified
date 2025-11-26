@@ -64,6 +64,23 @@ class TaskGenerationService {
     await this.clearRotation(userId, newVersion - 1);
     await this.saveRotation(userId, rotation, newVersion);
 
+    // 9. Update user progress with new rotation version
+    await this.prisma.user_task_progress.upsert({
+      where: { user_id: userId },
+      update: {
+        current_rotation_version: newVersion,
+        rotation_generated_at: new Date()
+      },
+      create: {
+        id: createId(),
+        user_id: userId,
+        current_task_index: 1,
+        current_rotation_version: newVersion,
+        rotation_generated_at: new Date(),
+        has_pending_config_changes: false
+      }
+    });
+
     return {
       version: newVersion,
       total_tasks: rotation.length,
