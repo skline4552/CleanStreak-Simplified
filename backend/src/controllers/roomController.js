@@ -3,6 +3,9 @@ const { prisma } = require('../config/prisma');
 const RoomService = require('../services/roomService');
 const { sanitizeString } = require('../utils/validation');
 
+// Instantiate service
+const roomService = new RoomService();
+
 class RoomController {
   /**
    * Create a new room configuration
@@ -33,7 +36,7 @@ class RoomController {
       }
 
       // Create room via service
-      const room = await RoomService.createRoom(userId, {
+      const room = await roomService.createRoom(userId, {
         roomType: roomType.toLowerCase(),
         customName: sanitizedName,
         hasGlass: hasGlass !== undefined ? hasGlass : true
@@ -70,7 +73,7 @@ class RoomController {
       const { userId } = req.user;
       const includeInactive = req.query.include_inactive === 'true';
 
-      const rooms = await RoomService.getUserRooms(userId, includeInactive);
+      const rooms = await roomService.getUserRooms(userId, includeInactive);
 
       res.status(200).json({
         success: true,
@@ -95,7 +98,7 @@ class RoomController {
       const { userId } = req.user;
       const { id } = req.params;
 
-      const room = await RoomService.getRoomById(id, userId);
+      const room = await roomService.getRoomById(id, userId);
 
       if (!room) {
         return res.status(404).json({
@@ -155,7 +158,7 @@ class RoomController {
         });
       }
 
-      const updatedRoom = await RoomService.updateRoom(id, userId, updates);
+      const updatedRoom = await roomService.updateRoom(id, userId, updates);
 
       if (!updatedRoom) {
         return res.status(404).json({
@@ -188,7 +191,7 @@ class RoomController {
       const { userId } = req.user;
       const { id } = req.params;
 
-      const success = await RoomService.deleteRoom(id, userId);
+      const success = await roomService.deleteRoom(id, userId);
 
       if (!success) {
         return res.status(404).json({
@@ -228,7 +231,7 @@ class RoomController {
         });
       }
 
-      const success = await RoomService.reorderRooms(userId, room_order);
+      const success = await roomService.reorderRooms(userId, room_order);
 
       if (!success) {
         return res.status(400).json({

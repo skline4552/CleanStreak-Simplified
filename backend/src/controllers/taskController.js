@@ -3,6 +3,11 @@ const TaskProgressService = require('../services/taskProgressService');
 const TaskGenerationService = require('../services/taskGenerationService');
 const RoomService = require('../services/roomService');
 
+// Instantiate services
+const taskGenerationService = new TaskGenerationService();
+const taskProgressService = new TaskProgressService();
+const roomService = new RoomService();
+
 class TaskController {
   /**
    * Get the current task from rotation
@@ -13,27 +18,29 @@ class TaskController {
       const { userId } = req.user;
 
       // Check if user has configured rooms
-      const hasRooms = await RoomService.hasConfiguredRooms(userId);
+      const hasRooms = await roomService.hasConfiguredRooms(userId);
 
       if (!hasRooms) {
         return res.status(200).json({
           task: null,
+          hasConfiguredRooms: false,
           message: 'No rooms configured. Please configure your home to get personalized tasks.'
         });
       }
 
       // Get current task from rotation
-      const task = await TaskProgressService.getCurrentTask(userId);
+      const task = await taskProgressService.getCurrentTask(userId);
 
       if (!task) {
         return res.status(200).json({
           task: null,
+          hasConfiguredRooms: true,
           message: 'No task rotation found. Please configure your rooms.'
         });
       }
 
       // Get progress information
-      const progress = await TaskProgressService.getProgress(userId);
+      const progress = await taskProgressService.getProgress(userId);
 
       // Get total tasks in current rotation
       const totalTasks = await prisma.task_rotation.count({
@@ -74,7 +81,14 @@ class TaskController {
       };
 
       res.status(200).json({
-        task: response
+        task: response,
+        hasConfiguredRooms: true,
+        progress: {
+          current_position: task.sequence_position,
+          total_tasks: totalTasks,
+          rotation_version: progress.current_rotation_version,
+          has_pending_changes: progress.has_pending_config_changes
+        }
       });
 
     } catch (error) {
@@ -96,7 +110,7 @@ class TaskController {
       const limit = Math.min(parseInt(req.query.limit, 10) || 20, 50);
 
       // Check if user has configured rooms
-      const hasRooms = await RoomService.hasConfiguredRooms(userId);
+      const hasRooms = await roomService.hasConfiguredRooms(userId);
 
       if (!hasRooms) {
         return res.status(200).json({
@@ -108,7 +122,7 @@ class TaskController {
       }
 
       // Get progress information
-      const progress = await TaskProgressService.getProgress(userId);
+      const progress = await taskProgressService.getProgress(userId);
 
       if (!progress) {
         return res.status(200).json({
@@ -162,11 +176,12 @@ class TaskController {
         } : null,
         pillar_type: task.pillar_type,
         keystone_type: task.keystone_type,
-        position: task.sequence_position
+        position: task.sequence_position,
+        is_current: task.sequence_position === progress.current_task_index
       }));
 
       res.status(200).json({
-        tasks: formattedTasks,
+        preview: formattedTasks,
         current_position: progress.current_task_index,
         total_tasks: totalTasks
       });
@@ -189,7 +204,7 @@ class TaskController {
       const { userId } = req.user;
 
       // Check if user has configured rooms
-      const hasRooms = await RoomService.hasConfiguredRooms(userId);
+      const hasRooms = await roomService.hasConfiguredRooms(userId);
 
       if (!hasRooms) {
         return res.status(400).json({
@@ -199,7 +214,7 @@ class TaskController {
       }
 
       // Generate new rotation
-      const rotation = await TaskGenerationService.generateRotation(userId, false);
+      const rotation = await taskGenerationService.generateRotation(userId, false);
 
       // Update progress to point to new rotation
       await prisma.user_task_progress.upsert({

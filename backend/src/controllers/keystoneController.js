@@ -2,6 +2,9 @@ const { prisma } = require('../config/prisma');
 const KeystoneService = require('../services/keystoneService');
 const { sanitizeString } = require('../utils/validation');
 
+// Instantiate service
+const keystoneService = new KeystoneService();
+
 class KeystoneController {
   /**
    * Get all user's keystone task configurations
@@ -12,7 +15,7 @@ class KeystoneController {
       const { userId } = req.user;
       const activeOnly = req.query.active_only === 'true';
 
-      const keystones = await KeystoneService.getUserKeystones(userId, activeOnly);
+      const keystones = await keystoneService.getUserKeystones(userId, activeOnly);
 
       res.status(200).json({
         success: true,
@@ -76,7 +79,7 @@ class KeystoneController {
         });
       }
 
-      const updatedKeystone = await KeystoneService.updateKeystone(id, userId, updates);
+      const updatedKeystone = await keystoneService.updateKeystone(id, userId, updates);
 
       if (!updatedKeystone) {
         return res.status(404).json({

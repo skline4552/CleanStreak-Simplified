@@ -393,6 +393,14 @@ function isValidJWTStructure(token) {
  * @returns {Promise<void>}
  */
 async function cleanupTestData() {
+  // Clean up room customization tables first (Phase 8)
+  await prisma.task_rotation.deleteMany({});
+  await prisma.user_task_progress.deleteMany({});
+  await prisma.pending_room_configs.deleteMany({});
+  await prisma.user_keystone_tasks.deleteMany({});
+  await prisma.user_rooms.deleteMany({});
+
+  // Clean up existing tables
   await prisma.completion_history.deleteMany({});
   await prisma.user_streaks.deleteMany({});
   await prisma.user_sessions.deleteMany({});

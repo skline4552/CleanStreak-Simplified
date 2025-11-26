@@ -14,6 +14,7 @@ class UserController {
   constructor() {
     this.streakService = new StreakService();
     this.accountService = new AccountService();
+    this.taskProgressService = new TaskProgressService();
 
     // Bind methods to preserve 'this' context
     this.getStreaks = this.getStreaks.bind(this);
@@ -182,7 +183,7 @@ class UserController {
       let nextTask = null;
       if (task_rotation_id) {
         try {
-          const nextTaskData = await TaskProgressService.advanceToNextTask(userId);
+          const nextTaskData = await this.taskProgressService.advanceToNextTask(userId);
 
           if (nextTaskData) {
             // Format next task for response
@@ -206,7 +207,7 @@ class UserController {
             }
 
             // Get progress for total tasks count
-            const progress = await TaskProgressService.getProgress(userId);
+            const progress = await this.taskProgressService.getProgress(userId);
             const totalTasks = await prisma.task_rotation.count({
               where: {
                 user_id: userId,
