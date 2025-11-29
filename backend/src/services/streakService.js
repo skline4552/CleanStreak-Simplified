@@ -283,11 +283,11 @@ class StreakService {
       return {
         completions: completions.map(completion => ({
           id: completion.id,
-          taskName: completion.task_name,
-          completedDate: completion.completed_date,
-          streakDay: completion.streak_day,
+          task_name: completion.task_name,  // Keep snake_case for API consistency
+          completed_date: completion.completed_date,
+          streak_day: completion.streak_day,
           notes: completion.notes,
-          createdAt: completion.created_at
+          created_at: completion.created_at
         })),
         pagination: {
           total: totalCount,

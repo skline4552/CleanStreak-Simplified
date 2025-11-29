@@ -112,14 +112,14 @@ describe('Room Configuration Flow Integration Tests', () => {
     });
 
     test('should handle multiple task completions in sequence', async () => {
-      // Setup rooms
+      // Setup rooms (with glass to ensure 3+ tasks)
       await request(app)
         .post('/api/rooms')
         .set(getAuthHeader(authToken))
         .send({
           roomType: 'bedroom',
           customName: 'Bedroom',
-          hasGlass: false
+          hasGlass: true  // Changed to true to generate 3 tasks (glass, surfaces, floor)
         });
 
       // Complete multiple tasks

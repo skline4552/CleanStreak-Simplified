@@ -125,28 +125,53 @@ class RoomService {
       throw new Error('Room not found or unauthorized');
     }
 
-    // Validate updates
-    const allowedFields = ['room_type', 'custom_name', 'has_glass', 'is_active'];
+    // Map camelCase to snake_case for database fields
     const updateData = {};
 
-    for (const field of allowedFields) {
-      if (updates.hasOwnProperty(field)) {
-        updateData[field] = updates[field];
-      }
-    }
-
-    // Validate room_type if being updated
-    if (updateData.room_type && !this.validateRoomType(updateData.room_type)) {
-      throw new Error(`Invalid room type: ${updateData.room_type}`);
-    }
-
-    // Validate custom_name if being updated
-    if (updateData.custom_name) {
-      const trimmed = updateData.custom_name.trim();
+    // Map customName -> custom_name
+    if (updates.customName !== undefined) {
+      const trimmed = updates.customName.trim();
       if (trimmed.length < 1 || trimmed.length > 50) {
         throw new Error('Custom name must be between 1 and 50 characters');
       }
       updateData.custom_name = trimmed;
+    } else if (updates.custom_name !== undefined) {
+      const trimmed = updates.custom_name.trim();
+      if (trimmed.length < 1 || trimmed.length > 50) {
+        throw new Error('Custom name must be between 1 and 50 characters');
+      }
+      updateData.custom_name = trimmed;
+    }
+
+    // Map hasGlass -> has_glass
+    if (updates.hasGlass !== undefined) {
+      updateData.has_glass = updates.hasGlass;
+    } else if (updates.has_glass !== undefined) {
+      updateData.has_glass = updates.has_glass;
+    }
+
+    // Map isActive -> is_active
+    if (updates.isActive !== undefined) {
+      updateData.is_active = updates.isActive;
+    } else if (updates.is_active !== undefined) {
+      updateData.is_active = updates.is_active;
+    }
+
+    // Map roomType -> room_type
+    if (updates.roomType !== undefined) {
+      if (!this.validateRoomType(updates.roomType)) {
+        throw new Error(`Invalid room type: ${updates.roomType}`);
+      }
+      updateData.room_type = updates.roomType;
+    } else if (updates.room_type !== undefined) {
+      if (!this.validateRoomType(updates.room_type)) {
+        throw new Error(`Invalid room type: ${updates.room_type}`);
+      }
+      updateData.room_type = updates.room_type;
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      throw new Error('No valid updates provided');
     }
 
     // Update room

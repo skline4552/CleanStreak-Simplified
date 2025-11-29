@@ -221,13 +221,14 @@ class RoomController {
   static async reorderRooms(req, res) {
     try {
       const { userId } = req.user;
-      const { room_order } = req.body;
+      // Accept both roomIds (from tests) and room_order (API spec)
+      const room_order = req.body.roomIds || req.body.room_order;
 
       // Validate room_order
       if (!Array.isArray(room_order) || room_order.length === 0) {
         return res.status(400).json({
           error: 'Validation failed',
-          message: 'room_order must be a non-empty array of room IDs'
+          message: 'roomIds or room_order must be a non-empty array of room IDs'
         });
       }
 

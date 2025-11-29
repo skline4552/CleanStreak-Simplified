@@ -72,9 +72,11 @@ class TaskController {
       const response = {
         id: task.id,
         description: task.task_description,
-        task_type: task.task_type,
+        type: task.task_type,  // Use 'type' to match test expectations
+        task_type: task.task_type,  // Keep for backward compatibility
         room: roomInfo,
-        pillar_type: task.pillar_type,
+        pillar: task.pillar_type,  // Use 'pillar' to match test expectations
+        pillar_type: task.pillar_type,  // Keep for backward compatibility
         keystone_type: task.keystone_type,
         position: task.sequence_position,
         total_tasks: totalTasks
@@ -114,19 +116,22 @@ class TaskController {
 
       if (!hasRooms) {
         return res.status(200).json({
-          tasks: [],
+          preview: [],
           current_position: 0,
           total_tasks: 0,
           message: 'No rooms configured'
         });
       }
 
+      // Ensure rotation exists (auto-generate if needed)
+      await taskProgressService.getCurrentTask(userId);
+
       // Get progress information
       const progress = await taskProgressService.getProgress(userId);
 
       if (!progress) {
         return res.status(200).json({
-          tasks: [],
+          preview: [],
           current_position: 0,
           total_tasks: 0,
           message: 'No rotation found'
@@ -145,16 +150,7 @@ class TaskController {
         orderBy: {
           sequence_position: 'asc'
         },
-        take: limit,
-        include: {
-          user_rooms: {
-            select: {
-              id: true,
-              custom_name: true,
-              room_type: true
-            }
-          }
-        }
+        take: limit
       });
 
       // Get total tasks count
@@ -165,20 +161,33 @@ class TaskController {
         }
       });
 
+      // Get unique room IDs to fetch room information
+      const roomIds = [...new Set(tasks.filter(t => t.room_id).map(t => t.room_id))];
+      const rooms = roomIds.length > 0 ? await prisma.user_rooms.findMany({
+        where: { id: { in: roomIds } },
+        select: { id: true, custom_name: true, room_type: true }
+      }) : [];
+
+      // Create a room lookup map
+      const roomMap = new Map(rooms.map(r => [r.id, r]));
+
       // Format tasks
-      const formattedTasks = tasks.map(task => ({
-        description: task.task_description,
-        task_type: task.task_type,
-        room: task.user_rooms ? {
-          id: task.user_rooms.id,
-          name: task.user_rooms.custom_name,
-          type: task.user_rooms.room_type
-        } : null,
-        pillar_type: task.pillar_type,
-        keystone_type: task.keystone_type,
-        position: task.sequence_position,
-        is_current: task.sequence_position === progress.current_task_index
-      }));
+      const formattedTasks = tasks.map(task => {
+        const room = task.room_id ? roomMap.get(task.room_id) : null;
+        return {
+          description: task.task_description,
+          task_type: task.task_type,
+          room: room ? {
+            id: room.id,
+            name: room.custom_name,
+            type: room.room_type
+          } : null,
+          pillar_type: task.pillar_type,
+          keystone_type: task.keystone_type,
+          position: task.sequence_position,
+          is_current: task.sequence_position === progress.current_task_index
+        };
+      });
 
       res.status(200).json({
         preview: formattedTasks,

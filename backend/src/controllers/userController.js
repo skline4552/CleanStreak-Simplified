@@ -232,8 +232,16 @@ class UserController {
         }
       }
 
+      // Build completion info
+      const completion = {
+        task_name: taskName,
+        completed_at: parsedDate,
+        notes: notes || null
+      };
+
       res.status(201).json({
         success: true,
+        completion,
         streak,
         next_task: nextTask
       });
