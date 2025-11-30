@@ -1302,6 +1302,113 @@
             font-style: italic;
         }
 
+        /* Keystone Onboarding */
+        #keystoneOnboardingOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            padding: 20px;
+        }
+
+        #keystoneOnboardingModal {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .keystone-checklist {
+            margin: 25px 0;
+        }
+
+        .keystone-onboarding-item {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .keystone-onboarding-item:hover {
+            border-color: #667eea;
+            background: #f5f7ff;
+        }
+
+        .keystone-onboarding-item.selected {
+            border-color: #667eea;
+            background: #f5f7ff;
+        }
+
+        .keystone-checkbox-container {
+            flex-shrink: 0;
+            padding-top: 2px;
+        }
+
+        .keystone-checkbox {
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            accent-color: #667eea;
+        }
+
+        .keystone-content {
+            flex: 1;
+        }
+
+        .keystone-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+            font-size: 1rem;
+        }
+
+        .keystone-description {
+            color: #6c757d;
+            font-size: 0.875rem;
+            line-height: 1.4;
+        }
+
+        .no-keystones-message {
+            text-align: center;
+            padding: 40px 20px;
+            color: #6c757d;
+        }
+
+        .no-keystones-message p {
+            margin: 10px 0;
+            font-size: 1rem;
+        }
+
+        .onboarding-footer {
+            margin: 20px 0 10px;
+            padding: 15px;
+            background: #e7f3ff;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .help-text {
+            margin: 0;
+            color: #495057;
+            font-size: 0.9rem;
+        }
+
         /* Task Preview */
         .preview-task-item {
             background: #f8f9fa;
@@ -1750,6 +1857,35 @@
                     Generate My Tasks
                 </button>
                 <button id="skipOnboarding" class="btn-secondary">Skip for Now</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Keystone Onboarding Modal Overlay -->
+    <div id="keystoneOnboardingOverlay" style="display: none;">
+        <div id="keystoneOnboardingModal">
+            <h2>🔑 Configure High-Frequency Hygiene Points</h2>
+            <p class="onboarding-subtitle">
+                Select the high-traffic areas in your home that need frequent attention.
+                These tasks will be interspersed throughout your cleaning rotation.
+            </p>
+
+            <div id="keystoneOnboardingList" class="keystone-checklist">
+                <!-- Keystones will be rendered here -->
+            </div>
+
+            <div class="onboarding-footer">
+                <p class="help-text">
+                    💡 <strong>Tip:</strong> You can always customize these later in Settings.
+                </p>
+            </div>
+
+            <!-- Action buttons -->
+            <div class="modal-actions">
+                <button id="saveKeystonesOnboarding" class="btn-primary large">
+                    Save & Start Cleaning!
+                </button>
+                <button id="skipKeystonesOnboarding" class="btn-secondary">Skip for Now</button>
             </div>
         </div>
     </div>
@@ -2257,6 +2393,54 @@
             async regenerateRotation() {
                 return apiRequest('/tasks/regenerate', {
                     method: 'POST'
+                });
+            }
+        };
+
+        /**
+         * Keystone Task Configuration API Methods
+         */
+        const KeystoneAPI = {
+            /**
+             * Get user's keystone tasks
+             * @param {boolean} activeOnly - Return only active keystones
+             * @returns {Promise<object>} Keystone tasks data
+             */
+            async getUserKeystones(activeOnly = false) {
+                const query = activeOnly ? '?active_only=true' : '';
+                return apiRequest(`/keystone-tasks${query}`, {
+                    method: 'GET'
+                });
+            },
+
+            /**
+             * Initialize keystone tasks for a new user
+             * @param {Array} keystones - Array of keystone objects with task_type and custom_name
+             * @returns {Promise<object>} Created keystones data
+             */
+            async initializeKeystones(keystones = []) {
+                return apiRequest('/keystone-tasks/initialize', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ keystones })
+                });
+            },
+
+            /**
+             * Update a keystone task
+             * @param {string} keystoneId - Keystone task ID
+             * @param {object} updates - Update data
+             * @returns {Promise<object>} Updated keystone data
+             */
+            async updateKeystone(keystoneId, updates) {
+                return apiRequest(`/keystone-tasks/${keystoneId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(updates)
                 });
             }
         };
@@ -3747,30 +3931,19 @@
             }
 
             try {
-                showNotification('Generating your task rotation...', 'info', 2000);
+                // Close room onboarding modal
+                hideOnboardingModal();
 
-                // Trigger rotation generation
-                const rotation = await TaskAPI.regenerateRotation();
+                // Update app state
+                AppState.user.hasConfiguredRooms = true;
+                saveState();
 
-                if (rotation.success) {
-                    // Close onboarding modal
-                    hideOnboardingModal();
+                // Show keystone onboarding next
+                await openKeystoneOnboardingModal();
 
-                    // Show success message
-                    showNotification(`${rotation.rotation.total_tasks} tasks generated! Ready to start cleaning.`, 'success', 4000);
-
-                    // Update app state
-                    AppState.user.hasConfiguredRooms = true;
-                    saveState();
-
-                    // Reload the page to fetch the first task
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1500);
-                }
             } catch (error) {
-                console.error('Failed to generate tasks:', error);
-                showNotification(error.message || 'Failed to generate tasks. Please try again.', 'error', 3000);
+                console.error('Onboarding error:', error);
+                showNotification(error.message || 'An error occurred. Please try again.', 'error', 3000);
             }
         }
 
@@ -3783,6 +3956,258 @@
                 AppState.user.hasConfiguredRooms = false;
                 saveState();
                 showNotification('You can set up rooms anytime!', 'info', 3000);
+            }
+        }
+
+        // ============================================
+        // KEYSTONE ONBOARDING FUNCTIONS
+        // ============================================
+
+        // Keystone fixture templates (used to generate per-room keystones)
+        const KEYSTONE_FIXTURE_TEMPLATES = {
+            bathroom: [
+                {
+                    type: 'toilet',
+                    name: (roomName) => `Scrub and disinfect ${roomName} toilet`,
+                    description: 'High-traffic bathroom fixture - keep it fresh and sanitary'
+                },
+                {
+                    type: 'sink',
+                    name: (roomName) => `Clean ${roomName} sink`,
+                    description: 'Personal hygiene area - keep counters and fixtures spotless'
+                },
+                {
+                    type: 'shower',
+                    name: (roomName) => `Scrub ${roomName} shower/tub`,
+                    description: 'Moisture-prone area - prevent mold and soap scum'
+                }
+            ],
+            kitchen: [
+                {
+                    type: 'sink',
+                    name: (roomName) => `Scrub ${roomName} sink and faucet`,
+                    description: 'Daily-use area prone to buildup - prevent bacteria growth'
+                },
+                {
+                    type: 'stovetop',
+                    name: (roomName) => `Wipe down ${roomName} stovetop and burners`,
+                    description: 'Cooking surface prone to spills - prevent grease buildup'
+                },
+                {
+                    type: 'microwave',
+                    name: (roomName) => `Clean ${roomName} microwave interior`,
+                    description: 'Food splatter zone - maintain hygiene and prevent odors'
+                }
+            ]
+        };
+
+        // State for keystone onboarding
+        const KeystoneOnboardingState = {
+            selectedKeystones: [],
+            isInitializing: false
+        };
+
+        /**
+         * Generate keystones for each room based on room type
+         * @param {Array} rooms - User's room configurations
+         * @returns {Array} - Array of keystone objects with task_type, name, description
+         */
+        function getApplicableKeystones(rooms) {
+            const keystones = [];
+
+            rooms.forEach(room => {
+                const templates = KEYSTONE_FIXTURE_TEMPLATES[room.room_type];
+
+                if (templates) {
+                    // Generate a keystone for each fixture in this room
+                    templates.forEach((template, index) => {
+                        keystones.push({
+                            task_type: `${template.type}_${room.id}`,
+                            name: template.name(room.custom_name),
+                            description: template.description,
+                            room_id: room.id,
+                            room_name: room.custom_name,
+                            fixture_type: template.type
+                        });
+                    });
+                }
+            });
+
+            return keystones;
+        }
+
+        /**
+         * Render the keystone onboarding checklist
+         * @param {Array} applicableKeystones - Array of keystone objects
+         */
+        function renderKeystoneOnboardingList(applicableKeystones) {
+            const container = document.getElementById('keystoneOnboardingList');
+
+            // If no applicable keystones, show a message
+            if (applicableKeystones.length === 0) {
+                container.innerHTML = `
+                    <div class="no-keystones-message">
+                        <p>No high-frequency hygiene points detected for your current room configuration.</p>
+                        <p>You can add kitchens or bathrooms in Settings to enable keystone tasks.</p>
+                    </div>
+                `;
+                KeystoneOnboardingState.selectedKeystones = [];
+                return;
+            }
+
+            // Default: all applicable keystones selected
+            KeystoneOnboardingState.selectedKeystones = applicableKeystones.map(k => ({...k, selected: true}));
+
+            const html = applicableKeystones.map((keystone, index) => `
+                <div class="keystone-onboarding-item selected" data-keystone-index="${index}" onclick="toggleKeystoneSelection(${index})">
+                    <div class="keystone-checkbox-container">
+                        <input type="checkbox"
+                               class="keystone-checkbox"
+                               id="keystone-${index}"
+                               checked
+                               onchange="event.stopPropagation(); toggleKeystoneSelection(${index})">
+                    </div>
+                    <label for="keystone-${index}" class="keystone-content" onclick="event.stopPropagation(); toggleKeystoneSelection(${index})">
+                        <div class="keystone-name">${keystone.name}</div>
+                        <div class="keystone-description">${keystone.description}</div>
+                    </label>
+                </div>
+            `).join('');
+
+            container.innerHTML = html;
+        }
+
+        /**
+         * Toggle keystone selection
+         * @param {number} index - Index of keystone in the list
+         */
+        function toggleKeystoneSelection(index) {
+            const item = document.querySelector(`[data-keystone-index="${index}"]`);
+            const checkbox = document.getElementById(`keystone-${index}`);
+
+            if (!item || !checkbox) return;
+
+            // Toggle checkbox
+            checkbox.checked = !checkbox.checked;
+
+            // Update visual state and selection
+            const keystone = KeystoneOnboardingState.selectedKeystones[index];
+            if (!keystone) return;
+
+            if (checkbox.checked) {
+                item.classList.add('selected');
+                keystone.selected = true;
+            } else {
+                item.classList.remove('selected');
+                keystone.selected = false;
+            }
+        }
+
+        /**
+         * Open keystone onboarding modal
+         */
+        async function openKeystoneOnboardingModal() {
+            try {
+                // Fetch user's rooms to determine applicable keystones
+                const response = await RoomAPI.getUserRooms();
+                const rooms = response.rooms || [];
+
+                // Get applicable keystones based on user's room configuration
+                const applicableKeystones = getApplicableKeystones(rooms);
+
+                // Render the filtered list
+                renderKeystoneOnboardingList(applicableKeystones);
+
+                // Show the modal
+                document.getElementById('keystoneOnboardingOverlay').style.display = 'flex';
+            } catch (error) {
+                console.error('Failed to load keystone onboarding:', error);
+                showNotification('Failed to load keystone configuration. Please try again.', 'error');
+            }
+        }
+
+        /**
+         * Close keystone onboarding modal
+         */
+        function closeKeystoneOnboardingModal() {
+            document.getElementById('keystoneOnboardingOverlay').style.display = 'none';
+        }
+
+        /**
+         * Handle save keystones from onboarding
+         */
+        async function handleSaveKeystonesOnboarding() {
+            const saveButton = document.getElementById('saveKeystonesOnboarding');
+            const originalText = saveButton.innerHTML;
+
+            try {
+                saveButton.disabled = true;
+                saveButton.innerHTML = 'Saving...';
+                KeystoneOnboardingState.isInitializing = true;
+
+                // Filter selected keystones only
+                const selectedKeystones = KeystoneOnboardingState.selectedKeystones
+                    .filter(k => k.selected !== false)
+                    .map(k => ({
+                        task_type: k.task_type,
+                        custom_name: k.name
+                    }));
+
+                await KeystoneAPI.initializeKeystones(selectedKeystones);
+
+                // Close modal
+                closeKeystoneOnboardingModal();
+
+                // Show success message and refresh
+                showNotification('Keystone tasks configured successfully!', 'success');
+
+                // Trigger rotation generation if user has rooms configured
+                await loadDashboard();
+
+            } catch (error) {
+                console.error('Failed to initialize keystones:', error);
+                showNotification(error.message || 'Failed to configure keystone tasks. Please try again.', 'error');
+                saveButton.disabled = false;
+                saveButton.innerHTML = originalText;
+            } finally {
+                KeystoneOnboardingState.isInitializing = false;
+            }
+        }
+
+        /**
+         * Handle skip keystones onboarding
+         */
+        async function handleSkipKeystonesOnboarding() {
+            try {
+                // Initialize with no active keystones (all disabled)
+                await KeystoneAPI.initializeKeystones([]);
+                closeKeystoneOnboardingModal();
+                showNotification('Keystone tasks skipped. You can enable them later in Settings.', 'info');
+                await loadDashboard();
+            } catch (error) {
+                console.error('Failed to skip keystones:', error);
+                // If initialization fails, just close the modal
+                closeKeystoneOnboardingModal();
+            }
+        }
+
+        /**
+         * Check if user needs keystone onboarding and show modal if needed
+         */
+        async function checkAndShowKeystoneOnboarding() {
+            try {
+                const response = await KeystoneAPI.getUserKeystones();
+
+                // If user has no keystones, show onboarding
+                if (!response.has_keystones || response.keystone_tasks.length === 0) {
+                    await openKeystoneOnboardingModal();
+                    return true;
+                }
+
+                return false;
+            } catch (error) {
+                console.error('Failed to check keystone status:', error);
+                return false;
             }
         }
 
@@ -3945,7 +4370,7 @@
         async function loadTaskPreview() {
             try {
                 const response = await TaskAPI.previewTasks(20);
-                renderTaskPreview(response.tasks || [], response.current_position || 0, response.total_tasks || 0);
+                renderTaskPreview(response.preview || [], response.current_position || 0, response.total_tasks || 0);
             } catch (error) {
                 console.error('Failed to load task preview:', error);
                 document.getElementById('taskPreviewList').innerHTML = '<p class="empty-state">Failed to load task preview.</p>';
@@ -4355,11 +4780,16 @@
                 // Phase 7: Check migration status and show banner if needed
                 await checkMigrationStatus();
 
+                // Check if user needs keystone onboarding
+                const needsKeystoneOnboarding = await checkAndShowKeystoneOnboarding();
+
                 // Hide modal
                 hideAuthModal();
 
-                // Show success notification
-                showNotification('Welcome back!', 'success', 3000);
+                // Show success notification (unless keystone onboarding is showing)
+                if (!needsKeystoneOnboarding) {
+                    showNotification('Welcome back!', 'success', 3000);
+                }
                 console.log('Login successful!');
             } catch (error) {
                 console.error('Login error:', error);
@@ -4499,6 +4929,10 @@
         document.getElementById('roomForm').addEventListener('submit', handleRoomFormSubmit);
         document.getElementById('finishOnboarding').addEventListener('click', handleFinishOnboarding);
         document.getElementById('skipOnboarding').addEventListener('click', handleSkipOnboarding);
+
+        // Event listeners - Keystone Onboarding
+        document.getElementById('saveKeystonesOnboarding').addEventListener('click', handleSaveKeystonesOnboarding);
+        document.getElementById('skipKeystonesOnboarding').addEventListener('click', handleSkipKeystonesOnboarding);
 
         // Close onboarding when clicking overlay
         document.getElementById('onboardingOverlay').addEventListener('click', (e) => {
