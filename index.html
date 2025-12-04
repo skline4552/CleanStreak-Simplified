@@ -2033,7 +2033,10 @@
                     <p class="tab-description">Preview your upcoming tasks in the rotation.</p>
 
                     <div id="taskPreviewList">
-                        <!-- Task preview items will be rendered here -->
+                        <div class="loading-spinner">
+                            <div class="spinner"></div>
+                            <p>Loading task preview...</p>
+                        </div>
                     </div>
 
                     <div class="preview-legend">
@@ -4502,12 +4505,37 @@
          * Load task preview
          */
         async function loadTaskPreview() {
+            const container = document.getElementById('taskPreviewList');
+
+            // Show loading indicator
+            container.innerHTML = `
+                <div class="loading-spinner">
+                    <div class="spinner"></div>
+                    <p>Loading task preview...</p>
+                </div>
+            `;
+
             try {
                 const response = await TaskAPI.previewTasks(20);
                 renderTaskPreview(response.preview || [], response.current_position || 0, response.total_tasks || 0);
             } catch (error) {
                 console.error('Failed to load task preview:', error);
-                document.getElementById('taskPreviewList').innerHTML = '<p class="empty-state">Failed to load task preview.</p>';
+                let errorMessage = 'Failed to load task preview.';
+
+                // Provide more specific error messages
+                if (error.status === 401) {
+                    errorMessage = 'Please log in to view your task preview.';
+                } else if (error.status === 500) {
+                    errorMessage = 'Server error. Please try again later.';
+                } else if (error.message && error.message.includes('Network')) {
+                    errorMessage = 'Network error. Please check your connection.';
+                }
+
+                container.innerHTML = `<p class="empty-state">${errorMessage}</p>`;
+
+                // Reset progress indicators on error
+                document.getElementById('currentPositionPreview').textContent = '-';
+                document.getElementById('totalTasksPreview').textContent = '-';
             }
         }
 
@@ -4517,15 +4545,18 @@
         function renderTaskPreview(tasks, currentPosition, totalTasks) {
             const container = document.getElementById('taskPreviewList');
 
-            if (tasks.length === 0) {
+            if (!tasks || tasks.length === 0) {
                 container.innerHTML = '<p class="empty-state">No tasks in rotation yet. Configure rooms to generate tasks.</p>';
+                // Reset progress indicators
+                document.getElementById('currentPositionPreview').textContent = '0';
+                document.getElementById('totalTasksPreview').textContent = '0';
                 return;
             }
 
             container.innerHTML = tasks.map(task => `
                 <div class="preview-task-item ${task.position === currentPosition ? 'current' : ''}" data-position="${task.position}">
                     <div class="task-number">${task.position}</div>
-                    <div class="task-description">${task.description}</div>
+                    <div class="task-description">${task.description || 'Task description unavailable'}</div>
                     <div class="task-meta">
                         ${task.task_type === 'pillar'
                             ? `<span class="badge pillar">${task.room ? task.room.name : 'Room'} - ${task.pillar_type}</span>`
@@ -4535,8 +4566,8 @@
                 </div>
             `).join('');
 
-            document.getElementById('currentPositionPreview').textContent = currentPosition;
-            document.getElementById('totalTasksPreview').textContent = totalTasks;
+            document.getElementById('currentPositionPreview').textContent = currentPosition || 0;
+            document.getElementById('totalTasksPreview').textContent = totalTasks || 0;
         }
 
         /**
