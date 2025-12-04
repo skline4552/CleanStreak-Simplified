@@ -48,24 +48,9 @@
             gap: 4px;
         }
 
-        .status-badge {
-            display: inline-block;
-            padding: 4px 12px;
-            background: #e9ecef;
-            color: #495057;
-            font-size: 0.85rem;
-            font-weight: 600;
-            border-radius: 12px;
-        }
-
-        .status-badge.authenticated {
-            background: #d4edda;
-            color: #155724;
-        }
-
         .user-email {
-            font-size: 0.8rem;
-            color: #6c757d;
+            font-size: 0.9rem;
+            color: #495057;
             font-weight: 500;
         }
 
@@ -1014,35 +999,6 @@
             font-weight: 500;
         }
 
-        /* Connection Status Badge in Header */
-        .connection-status {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 4px 10px;
-            background: #d4edda;
-            color: #155724;
-            font-size: 0.75rem;
-            font-weight: 600;
-            border-radius: 10px;
-            margin-left: 8px;
-        }
-
-        .connection-status.offline {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        .connection-status .status-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: #28a745;
-        }
-
-        .connection-status.offline .status-dot {
-            background: #dc3545;
-        }
 
         /* Sync Queue Indicator */
         .sync-queue-indicator {
@@ -1075,10 +1031,6 @@
                 left: 15px;
                 right: 15px;
                 max-width: calc(100% - 30px);
-            }
-
-            .connection-status {
-                display: none;
             }
         }
 
@@ -1704,12 +1656,7 @@
         <!-- User Header -->
         <div class="user-header">
             <div class="user-status" id="userStatus">
-                <span class="status-badge" id="statusBadge">Guest</span>
                 <span class="user-email" id="userEmail" style="display: none;"></span>
-                <span class="connection-status" id="connectionStatus">
-                    <span class="status-dot"></span>
-                    <span id="connectionText">Online</span>
-                </span>
             </div>
             <div class="user-actions">
                 <button class="header-button" id="settingsButton" style="display: none;">Settings</button>
@@ -2729,7 +2676,6 @@
          * Update UI to reflect current authentication state
          */
         function updateAuthUI() {
-            const statusBadge = document.getElementById('statusBadge');
             const userEmail = document.getElementById('userEmail');
             const loginButton = document.getElementById('loginButton');
             const logoutButton = document.getElementById('logoutButton');
@@ -2737,8 +2683,6 @@
 
             if (AppState.user.isAuthenticated && AppState.user.profile) {
                 // Authenticated state
-                statusBadge.textContent = 'Authenticated';
-                statusBadge.classList.add('authenticated');
                 userEmail.textContent = AppState.user.profile.email;
                 userEmail.style.display = 'block';
                 loginButton.style.display = 'none';
@@ -2746,8 +2690,6 @@
                 settingsButton.style.display = 'block';
             } else {
                 // Anonymous state
-                statusBadge.textContent = 'Guest';
-                statusBadge.classList.remove('authenticated');
                 userEmail.style.display = 'none';
                 loginButton.style.display = 'block';
                 logoutButton.style.display = 'none';
@@ -3274,19 +3216,13 @@
          */
         function updateConnectionStatus() {
             const offlineIndicator = document.getElementById('offlineIndicator');
-            const connectionStatus = document.getElementById('connectionStatus');
-            const connectionText = document.getElementById('connectionText');
 
             if (AppState.network.isOnline) {
                 // Online state
                 offlineIndicator.classList.remove('show');
-                connectionStatus.classList.remove('offline');
-                connectionText.textContent = 'Online';
             } else {
                 // Offline state
                 offlineIndicator.classList.add('show');
-                connectionStatus.classList.add('offline');
-                connectionText.textContent = 'Offline';
             }
         }
 
