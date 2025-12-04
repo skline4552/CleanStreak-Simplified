@@ -485,6 +485,59 @@
             display: block;
         }
 
+        .form-success {
+            background: #f0fff4;
+            color: #22543d;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+            border: 1px solid #9ae6b4;
+        }
+
+        .warning-text {
+            color: #e53e3e;
+            font-weight: 600;
+        }
+
+        .warning-box {
+            background: #fff5f5;
+            border: 2px solid #feb2b2;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 20px 0;
+        }
+
+        .warning-box strong {
+            color: #c53030;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .warning-box ul {
+            margin: 8px 0 0 20px;
+            color: #742a2a;
+        }
+
+        .warning-box li {
+            margin: 4px 0;
+        }
+
+        #changePasswordOverlay,
+        #deleteAccountOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            padding: 20px;
+        }
+
         .auth-button {
             width: 100%;
             background: linear-gradient(45deg, #667eea, #764ba2);
@@ -2028,6 +2081,87 @@
                 <button id="saveSettingsBtn" class="btn-primary">Save Changes</button>
                 <button class="btn-secondary" id="cancelSettingsBtn">Cancel</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Change Password Modal Overlay -->
+    <div id="changePasswordOverlay" style="display: none;">
+        <div id="changePasswordModal" class="auth-form">
+            <h2>Change Password</h2>
+            <p class="auth-subtitle">Enter your current password and choose a new one</p>
+
+            <form id="changePasswordForm">
+                <div class="form-group">
+                    <label for="currentPassword">Current Password</label>
+                    <input type="password" id="currentPassword" name="currentPassword" required autocomplete="current-password" placeholder="Enter current password">
+                </div>
+
+                <div class="form-group">
+                    <label for="newPassword">New Password</label>
+                    <input type="password" id="newPassword" name="newPassword" required autocomplete="new-password" placeholder="At least 8 characters">
+                    <small class="form-hint">Use 8+ characters with uppercase, lowercase, numbers, and symbols</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="confirmNewPassword">Confirm New Password</label>
+                    <input type="password" id="confirmNewPassword" name="confirmNewPassword" required autocomplete="new-password" placeholder="Confirm new password">
+                </div>
+
+                <div class="form-error" id="changePasswordError"></div>
+                <div class="form-success" id="changePasswordSuccess" style="display: none;"></div>
+
+                <div class="form-actions">
+                    <button type="submit" class="auth-button" id="changePasswordSubmitBtn">
+                        <span class="button-text">Change Password</span>
+                        <span class="button-loading" style="display: none;">Changing password...</span>
+                    </button>
+                    <button type="button" class="btn-secondary" id="cancelChangePasswordBtn">Cancel</button>
+                </div>
+            </form>
+
+            <button class="close-modal" id="closeChangePasswordModal" aria-label="Close">&times;</button>
+        </div>
+    </div>
+
+    <!-- Delete Account Modal Overlay -->
+    <div id="deleteAccountOverlay" style="display: none;">
+        <div id="deleteAccountModal" class="auth-form">
+            <h2>Delete Account</h2>
+            <p class="auth-subtitle warning-text">This action is permanent and cannot be undone!</p>
+
+            <div class="warning-box">
+                <strong>Warning:</strong> Deleting your account will permanently remove:
+                <ul>
+                    <li>All your task completions</li>
+                    <li>Your streak history</li>
+                    <li>Your room configurations</li>
+                    <li>All account data</li>
+                </ul>
+            </div>
+
+            <form id="deleteAccountForm">
+                <div class="form-group">
+                    <label for="deleteAccountEmail">Confirm your email</label>
+                    <input type="email" id="deleteAccountEmail" name="email" required autocomplete="email" placeholder="Enter your email">
+                </div>
+
+                <div class="form-group">
+                    <label for="deleteAccountConfirmation">Type "DELETE MY ACCOUNT" to confirm</label>
+                    <input type="text" id="deleteAccountConfirmation" name="confirmation" required placeholder="DELETE MY ACCOUNT">
+                </div>
+
+                <div class="form-error" id="deleteAccountError"></div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn-danger" id="deleteAccountSubmitBtn">
+                        <span class="button-text">Delete Account</span>
+                        <span class="button-loading" style="display: none;">Deleting account...</span>
+                    </button>
+                    <button type="button" class="btn-secondary" id="cancelDeleteAccountBtn">Cancel</button>
+                </div>
+            </form>
+
+            <button class="close-modal" id="closeDeleteAccountModal" aria-label="Close">&times;</button>
         </div>
     </div>
 
@@ -4419,6 +4553,192 @@
         }
 
         /**
+         * Open change password modal
+         */
+        function openChangePasswordModal() {
+            document.getElementById('changePasswordOverlay').style.display = 'flex';
+            document.getElementById('changePasswordForm').reset();
+            document.getElementById('changePasswordError').textContent = '';
+            document.getElementById('changePasswordError').classList.remove('show');
+            document.getElementById('changePasswordSuccess').style.display = 'none';
+        }
+
+        /**
+         * Close change password modal
+         */
+        function closeChangePasswordModal() {
+            document.getElementById('changePasswordOverlay').style.display = 'none';
+            document.getElementById('changePasswordForm').reset();
+        }
+
+        /**
+         * Handle change password form submission
+         */
+        async function handleChangePassword(event) {
+            event.preventDefault();
+
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmNewPassword = document.getElementById('confirmNewPassword').value;
+
+            const errorEl = document.getElementById('changePasswordError');
+            const successEl = document.getElementById('changePasswordSuccess');
+            const submitBtn = document.getElementById('changePasswordSubmitBtn');
+
+            // Clear previous messages
+            errorEl.textContent = '';
+            errorEl.classList.remove('show');
+            successEl.style.display = 'none';
+
+            // Validate passwords match
+            if (newPassword !== confirmNewPassword) {
+                errorEl.textContent = 'New passwords do not match';
+                errorEl.classList.add('show');
+                return;
+            }
+
+            // Disable submit button and show loading
+            submitBtn.disabled = true;
+            submitBtn.querySelector('.button-text').style.display = 'none';
+            submitBtn.querySelector('.button-loading').style.display = 'inline';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/user/change-password`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        currentPassword,
+                        newPassword
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    successEl.textContent = data.message || 'Password changed successfully!';
+                    successEl.style.display = 'block';
+                    document.getElementById('changePasswordForm').reset();
+
+                    // Close modal after 2 seconds
+                    setTimeout(() => {
+                        closeChangePasswordModal();
+                    }, 2000);
+                } else {
+                    let errorMessage = data.message || 'Failed to change password';
+
+                    // Show validation errors if available
+                    if (data.errors && Array.isArray(data.errors)) {
+                        errorMessage += ': ' + data.errors.join(', ');
+                    }
+
+                    errorEl.textContent = errorMessage;
+                    errorEl.classList.add('show');
+                }
+            } catch (error) {
+                console.error('Password change error:', error);
+                errorEl.textContent = 'Network error. Please try again.';
+                errorEl.classList.add('show');
+            } finally {
+                // Re-enable submit button
+                submitBtn.disabled = false;
+                submitBtn.querySelector('.button-text').style.display = 'inline';
+                submitBtn.querySelector('.button-loading').style.display = 'none';
+            }
+        }
+
+        /**
+         * Open delete account modal
+         */
+        function openDeleteAccountModal() {
+            document.getElementById('deleteAccountOverlay').style.display = 'flex';
+            document.getElementById('deleteAccountForm').reset();
+            document.getElementById('deleteAccountError').textContent = '';
+            document.getElementById('deleteAccountError').classList.remove('show');
+        }
+
+        /**
+         * Close delete account modal
+         */
+        function closeDeleteAccountModal() {
+            document.getElementById('deleteAccountOverlay').style.display = 'none';
+            document.getElementById('deleteAccountForm').reset();
+        }
+
+        /**
+         * Handle delete account form submission
+         */
+        async function handleDeleteAccount(event) {
+            event.preventDefault();
+
+            const email = document.getElementById('deleteAccountEmail').value;
+            const confirmation = document.getElementById('deleteAccountConfirmation').value;
+
+            const errorEl = document.getElementById('deleteAccountError');
+            const submitBtn = document.getElementById('deleteAccountSubmitBtn');
+
+            // Clear previous errors
+            errorEl.textContent = '';
+            errorEl.classList.remove('show');
+
+            // Validate confirmation text
+            if (confirmation !== 'DELETE MY ACCOUNT') {
+                errorEl.textContent = 'Please type "DELETE MY ACCOUNT" exactly to confirm';
+                errorEl.classList.add('show');
+                return;
+            }
+
+            // Double-check with user
+            if (!confirm('Are you absolutely sure? This action cannot be undone!')) {
+                return;
+            }
+
+            // Disable submit button and show loading
+            submitBtn.disabled = true;
+            submitBtn.querySelector('.button-text').style.display = 'none';
+            submitBtn.querySelector('.button-loading').style.display = 'inline';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/user/account`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        email,
+                        confirmation
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    // Account deleted successfully
+                    alert('Your account has been deleted successfully.');
+
+                    // Close modal and log out
+                    closeDeleteAccountModal();
+                    handleLogout();
+                } else {
+                    errorEl.textContent = data.message || 'Failed to delete account';
+                    errorEl.classList.add('show');
+                }
+            } catch (error) {
+                console.error('Account deletion error:', error);
+                errorEl.textContent = 'Network error. Please try again.';
+                errorEl.classList.add('show');
+            } finally {
+                // Re-enable submit button
+                submitBtn.disabled = false;
+                submitBtn.querySelector('.button-text').style.display = 'inline';
+                submitBtn.querySelector('.button-loading').style.display = 'none';
+            }
+        }
+
+        /**
          * Show add room form in settings
          */
         function showAddRoomForm() {
@@ -4965,6 +5285,32 @@
         document.getElementById('settingsOverlay').addEventListener('click', (e) => {
             if (e.target.id === 'settingsOverlay') {
                 closeSettingsModal();
+            }
+        });
+
+        // Event listeners - Change Password Modal
+        document.getElementById('changePasswordBtn').addEventListener('click', openChangePasswordModal);
+        document.getElementById('closeChangePasswordModal').addEventListener('click', closeChangePasswordModal);
+        document.getElementById('cancelChangePasswordBtn').addEventListener('click', closeChangePasswordModal);
+        document.getElementById('changePasswordForm').addEventListener('submit', handleChangePassword);
+
+        // Close change password modal when clicking overlay
+        document.getElementById('changePasswordOverlay').addEventListener('click', (e) => {
+            if (e.target.id === 'changePasswordOverlay') {
+                closeChangePasswordModal();
+            }
+        });
+
+        // Event listeners - Delete Account Modal
+        document.getElementById('deleteAccountBtn').addEventListener('click', openDeleteAccountModal);
+        document.getElementById('closeDeleteAccountModal').addEventListener('click', closeDeleteAccountModal);
+        document.getElementById('cancelDeleteAccountBtn').addEventListener('click', closeDeleteAccountModal);
+        document.getElementById('deleteAccountForm').addEventListener('submit', handleDeleteAccount);
+
+        // Close delete account modal when clicking overlay
+        document.getElementById('deleteAccountOverlay').addEventListener('click', (e) => {
+            if (e.target.id === 'deleteAccountOverlay') {
+                closeDeleteAccountModal();
             }
         });
 

@@ -2,6 +2,7 @@ const StreakService = require('../services/streakService');
 const AccountService = require('../services/accountService');
 const TaskProgressService = require('../services/taskProgressService');
 const { validateTaskName, sanitizeString, validateEmail } = require('../utils/validation');
+const { hashPassword, comparePassword, validatePasswordStrength } = require('../utils/password');
 
 /**
  * User Controller
@@ -28,6 +29,7 @@ class UserController {
     this.getAccountSummary = this.getAccountSummary.bind(this);
     this.exportData = this.exportData.bind(this);
     this.deleteAccount = this.deleteAccount.bind(this);
+    this.changePassword = this.changePassword.bind(this);
   }
 
   /**
@@ -616,6 +618,111 @@ class UserController {
         error: 'Internal server error',
         code: 'DATA_EXPORT_ERROR',
         message: 'Failed to export user data'
+      });
+    }
+  }
+
+  /**
+   * Change user password
+   * POST /api/user/change-password
+   */
+  async changePassword(req, res) {
+    try {
+      const userId = req.user.userId;
+      const { currentPassword, newPassword } = req.body;
+
+      // Validate required fields
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({
+          error: 'Bad request',
+          code: 'MISSING_FIELDS',
+          message: 'Current password and new password are required'
+        });
+      }
+
+      // Validate new password strength
+      const passwordValidation = validatePasswordStrength(newPassword);
+      if (!passwordValidation.isValid) {
+        return res.status(400).json({
+          error: 'Bad request',
+          code: 'WEAK_PASSWORD',
+          message: 'Password does not meet security requirements',
+          errors: passwordValidation.errors
+        });
+      }
+
+      // Get user from database
+      const { PrismaClient } = require('@prisma/client');
+      const prisma = new PrismaClient();
+
+      try {
+        const user = await prisma.users.findUnique({
+          where: { id: userId },
+          select: { id: true, email: true, password_hash: true }
+        });
+
+        if (!user) {
+          return res.status(404).json({
+            error: 'Not found',
+            code: 'USER_NOT_FOUND',
+            message: 'User account not found'
+          });
+        }
+
+        // Verify current password
+        const isCurrentPasswordValid = await comparePassword(currentPassword, user.password_hash);
+        if (!isCurrentPasswordValid) {
+          return res.status(401).json({
+            error: 'Unauthorized',
+            code: 'INVALID_CURRENT_PASSWORD',
+            message: 'Current password is incorrect'
+          });
+        }
+
+        // Check that new password is different from current password
+        const isSamePassword = await comparePassword(newPassword, user.password_hash);
+        if (isSamePassword) {
+          return res.status(400).json({
+            error: 'Bad request',
+            code: 'SAME_PASSWORD',
+            message: 'New password must be different from current password'
+          });
+        }
+
+        // Hash new password
+        const newPasswordHash = await hashPassword(newPassword);
+
+        // Update password in database
+        await prisma.users.update({
+          where: { id: userId },
+          data: {
+            password_hash: newPasswordHash,
+            updated_at: new Date()
+          }
+        });
+
+        res.status(200).json({
+          success: true,
+          message: 'Password changed successfully'
+        });
+      } finally {
+        await prisma.$disconnect();
+      }
+    } catch (error) {
+      console.error('Error in changePassword:', error);
+
+      if (error.message.includes('Password hashing failed')) {
+        return res.status(500).json({
+          error: 'Internal server error',
+          code: 'PASSWORD_HASH_ERROR',
+          message: 'Failed to process new password'
+        });
+      }
+
+      res.status(500).json({
+        error: 'Internal server error',
+        code: 'PASSWORD_CHANGE_ERROR',
+        message: 'Failed to change password'
       });
     }
   }

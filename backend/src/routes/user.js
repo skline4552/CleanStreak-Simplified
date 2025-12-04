@@ -82,6 +82,14 @@ router.get('/export',
   userController.exportData
 );
 
+// Change user password
+// POST /api/user/change-password
+// Rate limited for security
+router.post('/change-password',
+  authRateLimit({ type: 'general', max: 5, windowMs: 60 * 60 * 1000 }), // 5 per hour
+  userController.changePassword
+);
+
 // Delete user account and all associated data
 // DELETE /api/user/account
 // Very restrictive rate limiting for security
