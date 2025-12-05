@@ -464,6 +464,8 @@
             margin-bottom: 20px;
             display: none;
             border: 1px solid #feb2b2;
+            white-space: pre-line;
+            line-height: 1.5;
         }
 
         .form-error.show {
@@ -2226,7 +2228,16 @@
 
                 // Handle non-OK responses
                 if (!response.ok) {
-                    const error = new Error(data.message || `HTTP ${response.status}`);
+                    // Extract error message from various response formats
+                    let errorMessage = data.message || data.error || `HTTP ${response.status}`;
+
+                    // If there are validation details, format them into a readable message
+                    if (data.details && Array.isArray(data.details) && data.details.length > 0) {
+                        // Join all validation errors with line breaks
+                        errorMessage = data.details.join('\n');
+                    }
+
+                    const error = new Error(errorMessage);
                     error.status = response.status;
                     error.data = data;
                     throw error;
