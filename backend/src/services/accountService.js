@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const { validateEmail, sanitizeString } = require('../utils/validation');
+const StreakService = require('./streakService');
 
 /**
  * Account Service
@@ -11,6 +12,7 @@ const { validateEmail, sanitizeString } = require('../utils/validation');
 class AccountService {
   constructor() {
     this.prisma = new PrismaClient();
+    this.streakService = new StreakService();
   }
 
   /**
@@ -248,11 +250,13 @@ class AccountService {
         throw new Error('User not found');
       }
 
-      // Get data counts
+      // Get data counts and streak data
       const [
         totalCompletions,
         totalStreaks,
-        activeSessions
+        activeSessions,
+        statsData,
+        streaksData
       ] = await Promise.all([
         this.prisma.completion_history.count({ where: { user_id: userId } }),
         this.prisma.user_streaks.count({ where: { user_id: userId } }),
@@ -262,20 +266,32 @@ class AccountService {
             is_active: true,
             expires_at: { gt: new Date() }
           }
-        })
+        }),
+        this.streakService.getStreakStats(userId),
+        this.streakService.getUserStreaks(userId)
       ]);
 
       // Calculate account age
       const accountAge = user.created_at ?
         Math.floor((new Date() - new Date(user.created_at)) / (24 * 60 * 60 * 1000)) : 0;
 
+      // Get primary streak
+      const primaryStreak = streaksData[0];
+
       return {
         account: {
-          id: user.id,
-          email: user.email,
-          createdAt: user.created_at,
-          lastLogin: user.last_login,
-          accountAgeDays: accountAge
+          user: {
+            id: user.id,
+            email: user.email,
+            createdAt: user.created_at,
+            lastLogin: user.last_login,
+            accountAgeDays: accountAge
+          },
+          stats: {
+            current_streak: primaryStreak?.currentStreak || 0,
+            longest_streak: statsData.bestOverallStreak || 0,
+            total_completions: statsData.totalCompletions || 0
+          }
         },
         dataStorage: {
           totalCompletions,

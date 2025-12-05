@@ -42,25 +42,28 @@ const sessionConfig = {
   extendSessionOnActivity: true
 };
 
+// Detect test environment for rate limiting adjustments
+const isTestEnv = process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined;
+
 // Rate limiting configuration for auth endpoints
 const authRateLimit = {
   // Login attempts
   login: {
-    windowMs: 15 * 60 * 1000, // 15 minutes
+    windowMs: isTestEnv ? 60 * 1000 : 15 * 60 * 1000, // 1 minute in tests, 15 minutes in production
     max: 5, // 5 attempts per window
     skipSuccessfulRequests: true
   },
 
   // Registration attempts
   register: {
-    windowMs: 60 * 60 * 1000, // 1 hour
+    windowMs: isTestEnv ? 60 * 1000 : 60 * 60 * 1000, // 1 minute in tests, 1 hour in production
     max: 3, // 3 registrations per hour per IP
     skipFailedRequests: true // Don't count validation failures, only successful registrations
   },
 
   // Password reset attempts
   passwordReset: {
-    windowMs: 60 * 60 * 1000, // 1 hour
+    windowMs: isTestEnv ? 60 * 1000 : 60 * 60 * 1000, // 1 minute in tests, 1 hour in production
     max: 3, // 3 password reset attempts per hour
     skipSuccessfulRequests: true
   }

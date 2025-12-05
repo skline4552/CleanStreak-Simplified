@@ -28,9 +28,11 @@ class KeystoneService {
   /**
    * Initialize default keystones for a new user
    * @param {string} userId - User ID
+   * @param {Object} options - Initialization options
+   * @param {string[]} options.activeKeystones - Array of keystone types to enable (all enabled if not provided)
    * @returns {Promise<Array>} Array of created keystone objects
    */
-  async initializeDefaultKeystones(userId) {
+  async initializeDefaultKeystones(userId, options = {}) {
     // Check if user already has keystones
     const existingCount = await this.prisma.user_keystone_tasks.count({
       where: { user_id: userId }
@@ -40,13 +42,57 @@ class KeystoneService {
       throw new Error('User already has keystones initialized');
     }
 
-    // Create all default keystones
+    // Determine which keystones should be active
+    const activeKeystones = options.activeKeystones || this.defaultKeystones;
+    const activeSet = new Set(activeKeystones);
+
+    // Create all default keystones with selective activation
     const keystones = this.defaultKeystones.map((taskType, index) => ({
       id: createId(),
       user_id: userId,
       task_type: taskType,
       custom_name: null,
-      is_active: true,
+      is_active: activeSet.has(taskType),
+      sort_order: index + 1
+    }));
+
+    // Batch create
+    await this.prisma.user_keystone_tasks.createMany({
+      data: keystones
+    });
+
+    // Return created keystones
+    return await this.getUserKeystones(userId);
+  }
+
+  /**
+   * Initialize custom keystones for a new user
+   * @param {string} userId - User ID
+   * @param {Array} keystoneData - Array of keystone objects with task_type and optional custom_name
+   * @returns {Promise<Array>} Array of created keystone objects
+   */
+  async initializeCustomKeystones(userId, keystoneData) {
+    // Check if user already has keystones
+    const existingCount = await this.prisma.user_keystone_tasks.count({
+      where: { user_id: userId }
+    });
+
+    if (existingCount > 0) {
+      throw new Error('User already has keystones initialized');
+    }
+
+    // If no keystones provided, return empty array
+    if (!keystoneData || keystoneData.length === 0) {
+      return [];
+    }
+
+    // Create keystones from provided data
+    const keystones = keystoneData.map((keystone, index) => ({
+      id: createId(),
+      user_id: userId,
+      task_type: keystone.task_type,
+      custom_name: keystone.custom_name || null,
+      is_active: true,  // All selected keystones are active
       sort_order: index + 1
     }));
 

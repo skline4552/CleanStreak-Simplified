@@ -9,6 +9,7 @@
  */
 
 const { prisma } = require('../../src/config/prisma');
+const { createId } = require('@paralleldrive/cuid2');
 const TaskProgressService = require('../../src/services/taskProgressService');
 const TaskGenerationService = require('../../src/services/taskGenerationService');
 const RoomService = require('../../src/services/roomService');
@@ -153,8 +154,8 @@ describe('TaskProgressService Unit Tests', () => {
 
     test('should return correct current task', async () => {
       await setupTestRooms(testUser.id, 2);
+      // generateRotation already creates/updates progress via upsert
       await taskGenerationService.generateRotation(testUser.id);
-      await taskProgressService.initializeProgress(testUser.id, 1);
 
       const task = await taskProgressService.getCurrentTask(testUser.id);
 
@@ -247,8 +248,8 @@ describe('TaskProgressService Unit Tests', () => {
       // Setup small rotation (2 pillar tasks)
       await setupTestRooms(testUser.id, 1, { hasGlass: false });
 
+      // generateRotation already initializes progress via upsert
       const rotation1 = await taskGenerationService.generateRotation(testUser.id);
-      await taskProgressService.initializeProgress(testUser.id, rotation1.version);
 
       const totalTasks = rotation1.total_tasks;
       expect(totalTasks).toBe(2); // surfaces + floor
@@ -315,8 +316,8 @@ describe('TaskProgressService Unit Tests', () => {
       await keystoneService.updateKeystone(keystones[0].id, testUser.id, { isActive: true });
       await keystoneService.updateKeystone(keystones[1].id, testUser.id, { isActive: true });
 
+      // generateRotation already initializes progress via upsert
       const rotation1 = await taskGenerationService.generateRotation(testUser.id);
-      await taskProgressService.initializeProgress(testUser.id, rotation1.version);
 
       // Get keystone order in first rotation
       const tasks1 = await prisma.task_rotation.findMany({
@@ -403,7 +404,17 @@ describe('TaskProgressService Unit Tests', () => {
       const config1 = { rooms: [], keystones: [] };
       await taskProgressService.stagePendingChanges(testUser.id, config1);
 
-      const config2 = { rooms: [{ id: 'test' }], keystones: [] };
+      const config2 = {
+        rooms: [{
+          id: 'test-room-id',
+          roomType: 'bedroom',
+          customName: 'Test Room',
+          hasGlass: true,
+          sortOrder: 1,
+          isActive: true
+        }],
+        keystones: []
+      };
       await taskProgressService.stagePendingChanges(testUser.id, config2);
 
       const pending = await prisma.pending_room_configs.findUnique({
@@ -426,7 +437,17 @@ describe('TaskProgressService Unit Tests', () => {
       await taskGenerationService.generateRotation(testUser.id);
       await taskProgressService.getCurrentTask(testUser.id);
 
-      const config = { rooms: [{ id: 'test' }], keystones: [] };
+      const config = {
+        rooms: [{
+          id: 'test-room-id',
+          roomType: 'kitchen',
+          customName: 'Test Kitchen',
+          hasGlass: false,
+          sortOrder: 1,
+          isActive: true
+        }],
+        keystones: []
+      };
       await taskProgressService.stagePendingChanges(testUser.id, config);
 
       const pending = await taskProgressService.getPendingChanges(testUser.id);

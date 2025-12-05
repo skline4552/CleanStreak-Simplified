@@ -19,7 +19,8 @@ class KeystoneController {
 
       res.status(200).json({
         success: true,
-        keystone_tasks: keystones
+        keystone_tasks: keystones,
+        has_keystones: keystones.length > 0
       });
 
     } catch (error) {
@@ -27,6 +28,67 @@ class KeystoneController {
       res.status(500).json({
         error: 'Internal server error',
         message: 'Failed to retrieve keystone tasks. Please try again.'
+      });
+    }
+  }
+
+  /**
+   * Initialize keystone tasks for user
+   * POST /api/keystone-tasks/initialize
+   */
+  static async initializeKeystones(req, res) {
+    try {
+      const { userId } = req.user;
+      const { keystones } = req.body;
+
+      // Validate keystones if provided
+      if (keystones !== undefined) {
+        if (!Array.isArray(keystones)) {
+          return res.status(400).json({
+            error: 'Validation failed',
+            message: 'keystones must be an array'
+          });
+        }
+
+        // Validate each keystone object
+        for (const keystone of keystones) {
+          if (!keystone.task_type || typeof keystone.task_type !== 'string') {
+            return res.status(400).json({
+              error: 'Validation failed',
+              message: 'Each keystone must have a task_type string'
+            });
+          }
+
+          if (keystone.custom_name && typeof keystone.custom_name !== 'string') {
+            return res.status(400).json({
+              error: 'Validation failed',
+              message: 'custom_name must be a string if provided'
+            });
+          }
+        }
+      }
+
+      const result = await keystoneService.initializeCustomKeystones(userId, keystones || []);
+
+      res.status(201).json({
+        success: true,
+        keystone_tasks: result,
+        message: 'Keystone tasks initialized successfully'
+      });
+
+    } catch (error) {
+      console.error('Initialize keystones error:', error);
+
+      if (error.message === 'User already has keystones initialized') {
+        return res.status(409).json({
+          error: 'Already initialized',
+          message: 'Keystone tasks have already been initialized for this user'
+        });
+      }
+
+      res.status(500).json({
+        error: 'Internal server error',
+        message: 'Failed to initialize keystone tasks. Please try again.'
       });
     }
   }

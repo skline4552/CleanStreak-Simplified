@@ -429,16 +429,22 @@ describe('Streak Management Integration Tests', () => {
     test('should handle completions at day boundary', async () => {
       const { accessToken } = await createAuthenticatedUser();
 
-      // Complete task at end of day
+      // Complete task at end of day using local date formatting to avoid timezone issues
       const endOfDay = new Date();
       endOfDay.setHours(23, 59, 59);
+
+      // Format date as YYYY-MM-DD in local timezone (not UTC)
+      const year = endOfDay.getFullYear();
+      const month = String(endOfDay.getMonth() + 1).padStart(2, '0');
+      const day = String(endOfDay.getDate()).padStart(2, '0');
+      const localDate = `${year}-${month}-${day}`;
 
       const response = await request(app)
         .post('/api/user/complete')
         .set(getAuthHeader(accessToken))
         .send({
           taskName: 'End of day task',
-          completionDate: endOfDay.toISOString().split('T')[0]
+          completionDate: localDate
         })
         .expect(201);
 

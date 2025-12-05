@@ -148,22 +148,30 @@ class TaskGenerationService {
    * @private
    */
   insertKeystonesRandomly(pillarTasks, keystones) {
+    if (pillarTasks.length === 0 || keystones.length === 0) {
+      return pillarTasks;
+    }
+
     const result = [];
     const keystoneInterval = { min: 3, max: 5 };
     let tasksSinceLastKeystone = 0;
     let keystoneIndex = 0;
+    let pillarIndex = 0;
+    let nextKeystoneInterval = this.getRandomInt(keystoneInterval.min, keystoneInterval.max);
 
-    for (const task of pillarTasks) {
+    // Continue until all keystones are inserted
+    while (keystoneIndex < keystones.length) {
+      // Add pillar tasks (cycling through if needed, clone to avoid duplicate sequence positions)
+      const originalTask = pillarTasks[pillarIndex % pillarTasks.length];
+      const task = { ...originalTask }; // Clone to avoid duplicate sequence_position
       result.push(task);
       tasksSinceLastKeystone++;
+      pillarIndex++;
 
-      // Insert keystone at random interval (3-5 tasks)
-      const shouldInsert = tasksSinceLastKeystone >= this.getRandomInt(
-        keystoneInterval.min,
-        keystoneInterval.max
-      );
+      // Insert keystone at the predetermined interval (3-5 tasks)
+      const shouldInsert = tasksSinceLastKeystone >= nextKeystoneInterval;
 
-      if (shouldInsert && keystoneIndex < keystones.length) {
+      if (shouldInsert) {
         result.push({
           type: 'keystone',
           keystoneType: keystones[keystoneIndex].task_type,
@@ -174,20 +182,9 @@ class TaskGenerationService {
         });
         keystoneIndex++;
         tasksSinceLastKeystone = 0;
+        // Generate new random interval for next keystone
+        nextKeystoneInterval = this.getRandomInt(keystoneInterval.min, keystoneInterval.max);
       }
-    }
-
-    // Insert remaining keystones at end
-    while (keystoneIndex < keystones.length) {
-      result.push({
-        type: 'keystone',
-        keystoneType: keystones[keystoneIndex].task_type,
-        description: this.taskTemplateService.getKeystoneDescription(
-          keystones[keystoneIndex].task_type,
-          keystones[keystoneIndex].custom_name
-        )
-      });
-      keystoneIndex++;
     }
 
     return result;
