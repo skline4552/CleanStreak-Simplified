@@ -1805,14 +1805,6 @@
             <p class="onboarding-subtitle">Configure your rooms to get personalized cleaning tasks based on the three-pillars methodology.</p>
 
             <div id="roomConfigSection">
-                <!-- Configured rooms display -->
-                <div id="configuredRoomsList">
-                    <h3>Your Rooms</h3>
-                    <div id="roomsContainer">
-                        <p class="empty-state">No rooms added yet. Add your first room below!</p>
-                    </div>
-                </div>
-
                 <!-- Add room form -->
                 <div id="addRoomFormSection">
                     <h3>Add a Room</h3>
@@ -1850,6 +1842,14 @@
 
                         <button type="submit" class="btn-primary">Add Room</button>
                     </form>
+                </div>
+
+                <!-- Configured rooms display -->
+                <div id="configuredRoomsList">
+                    <h3>Your Rooms</h3>
+                    <div id="roomsContainer">
+                        <p class="empty-state">No rooms added yet. Start by adding your first room above!</p>
+                    </div>
                 </div>
             </div>
 
@@ -3629,6 +3629,31 @@
             }
         }
 
+        /**
+         * Load/reload dashboard data after onboarding or configuration changes
+         * Refreshes the current task display to show rotation-based tasks
+         */
+        async function loadDashboard() {
+            try {
+                // Check if user has configured rooms
+                const roomsResponse = await RoomAPI.getUserRooms();
+                const hasRooms = roomsResponse.rooms && roomsResponse.rooms.length > 0;
+
+                // Update app state
+                AppState.user.hasConfiguredRooms = hasRooms;
+                saveState();
+
+                // Refresh the task display
+                await updateDisplay();
+
+                console.log('Dashboard loaded successfully', { hasRooms });
+            } catch (error) {
+                console.error('Failed to load dashboard:', error);
+                // Still try to update display even if room check fails
+                await updateDisplay();
+            }
+        }
+
         async function completeTask() {
             const task = AppState.currentTask;
             const todayString = getTodayString();
@@ -4425,7 +4450,19 @@
                 return;
             }
 
-            container.innerHTML = SettingsState.keystones.map(keystone => `
+            // Debug: log keystone data to help identify any issues
+            console.log('Rendering keystones:', SettingsState.keystones);
+
+            container.innerHTML = SettingsState.keystones.map(keystone => {
+                // Debug: warn if task_type looks suspicious
+                if (keystone.task_type && keystone.task_type.length > 50) {
+                    console.warn('Suspicious task_type detected:', {
+                        id: keystone.id,
+                        task_type: keystone.task_type
+                    });
+                }
+
+                return `
                 <div class="keystone-item" data-keystone-id="${keystone.id}">
                     <div class="keystone-toggle">
                         <label class="switch">
@@ -4445,7 +4482,7 @@
                                onchange="updateKeystoneCustomName('${keystone.id}', this.value)">
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
         }
 
         /**
@@ -4916,6 +4953,11 @@
          * Get keystone default name
          */
         function getKeystoneDefaultName(taskType) {
+            // Handle null/undefined
+            if (!taskType) {
+                return 'Unknown Task';
+            }
+
             const names = {
                 master_toilet: 'Scrub and disinfect master toilet',
                 guest_toilet: 'Scrub and disinfect guest/hall toilet',
@@ -4926,7 +4968,33 @@
                 shower_tub: 'Scrub shower/tub',
                 microwave: 'Clean microwave interior'
             };
-            return names[taskType] || taskType;
+
+            // If exact match found, return it
+            if (names[taskType]) {
+                return names[taskType];
+            }
+
+            // If taskType looks like an ID (contains underscore followed by long alphanumeric),
+            // try to extract the actual task type
+            const idPattern = /^([a-z_]+)_[a-z0-9]{20,}$/i;
+            const match = taskType.match(idPattern);
+            if (match) {
+                const extractedType = match[1];
+                console.warn(`Keystone task_type appears to be an ID. Extracted: ${extractedType} from ${taskType}`);
+                // Try to find a match with the extracted type
+                if (names[extractedType]) {
+                    return names[extractedType];
+                }
+                // Return a friendly version of the extracted type
+                return extractedType.split('_').map(word =>
+                    word.charAt(0).toUpperCase() + word.slice(1)
+                ).join(' ');
+            }
+
+            // Fallback: format the task type nicely
+            return taskType.split('_').map(word =>
+                word.charAt(0).toUpperCase() + word.slice(1)
+            ).join(' ');
         }
 
         /**
