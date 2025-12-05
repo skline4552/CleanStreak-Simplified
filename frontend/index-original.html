@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Clean</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px 30px;
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .task-card {
+            background: #f8f9ff;
+            border-radius: 15px;
+            padding: 30px 20px;
+            margin-bottom: 30px;
+            border: 2px solid #e9ecef;
+        }
+
+        .task-text {
+            font-size: 1.2rem;
+            color: #495057;
+            font-weight: 500;
+            line-height: 1.4;
+        }
+
+        .streak-counter {
+            margin-bottom: 30px;
+            padding: 15px;
+            background: #e8f5e8;
+            border-radius: 10px;
+            border: 2px solid #28a745;
+        }
+
+        .streak-text {
+            color: #28a745;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .done-button {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 20px 50px;
+            font-size: 1.3rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+            width: 100%;
+            max-width: 200px;
+        }
+
+        .done-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(40, 167, 69, 0.4);
+        }
+
+        .done-button:active {
+            transform: translateY(0);
+        }
+
+        .done-button.completed {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .completed-message {
+            color: #6c757d;
+            font-size: 1.1rem;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .completion-animation {
+            animation: pulse 0.6s ease-in-out;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 30px 20px;
+            }
+
+            h1 {
+                font-size: 1.7rem;
+            }
+
+            .task-text {
+                font-size: 1.1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Daily Clean</h1>
+
+        <div class="task-card">
+            <div class="task-text" id="taskText"></div>
+        </div>
+
+        <div class="streak-counter">
+            <div class="streak-text" id="streakText"></div>
+        </div>
+
+        <button class="done-button" id="doneButton">
+            Done!
+        </button>
+
+        <div class="completed-message" id="completedMessage">
+            Already completed today! Come back tomorrow for your next task.
+        </div>
+    </div>
+
+    <script>
+        const cleaningTasks = [
+            "Make your bed",
+            "Wipe down kitchen counters",
+            "Clean bathroom mirror",
+            "Dust living room TV",
+            "Organize one drawer",
+            "Vacuum entryway",
+            "Wipe down light switches",
+            "Clean coffee table",
+            "Tidy up couch cushions",
+            "Wipe down door handles",
+            "Clean kitchen sink",
+            "Organize desk workspace",
+            "Dust nightstand",
+            "Wipe bathroom counter",
+            "Sweep kitchen floor",
+            "Clean toilet seat and rim",
+            "Organize medicine cabinet",
+            "Dust picture frames",
+            "Wipe down refrigerator exterior",
+            "Clean computer keyboard",
+            "Organize bookshelf",
+            "Dust ceiling fan blades",
+            "Wipe down dining table",
+            "Clean microwave interior",
+            "Organize closet floor",
+            "Dust windowsills",
+            "Clean shower door or curtain",
+            "Wipe down baseboards in one room",
+            "Organize pantry shelf",
+            "Clean bathroom faucet",
+            "Dust lamp shades",
+            "Wipe down kitchen appliances",
+            "Organize junk drawer",
+            "Clean mirror in bedroom",
+            "Vacuum stairs",
+            "Wipe down trash cans",
+            "Organize shoes by front door",
+            "Clean inside of dishwasher",
+            "Dust electronics",
+            "Wipe down cabinet fronts",
+            "Organize bathroom drawer",
+            "Clean stovetop",
+            "Dust coffee table books",
+            "Wipe down washing machine",
+            "Organize coat closet",
+            "Clean bathroom scale",
+            "Dust dining chairs",
+            "Wipe down phone and chargers",
+            "Organize one kitchen cabinet",
+            "Clean out car cup holders"
+        ];
+
+        let currentStreak = 0;
+        let lastCompletedDate = null;
+
+        function getTodaysTask() {
+            const today = new Date();
+            const dayOfMonth = today.getDate();
+            return cleaningTasks[(dayOfMonth - 1) % cleaningTasks.length];
+        }
+
+        function getTodayString() {
+            const today = new Date();
+            return today.toDateString();
+        }
+
+        function updateDisplay() {
+            const todaysTask = getTodaysTask();
+            const todayString = getTodayString();
+
+            document.getElementById('taskText').textContent = todaysTask;
+
+            if (lastCompletedDate === todayString) {
+                document.getElementById('streakText').textContent = `🔥 Current streak: ${currentStreak} days`;
+                document.getElementById('doneButton').textContent = 'Completed!';
+                document.getElementById('doneButton').classList.add('completed');
+                document.getElementById('doneButton').disabled = true;
+                document.getElementById('completedMessage').style.display = 'block';
+            } else {
+                document.getElementById('streakText').textContent = `🔥 Current streak: ${currentStreak} days`;
+                document.getElementById('doneButton').textContent = 'Done!';
+                document.getElementById('doneButton').classList.remove('completed');
+                document.getElementById('doneButton').disabled = false;
+                document.getElementById('completedMessage').style.display = 'none';
+            }
+        }
+
+        function completeTask() {
+            const todayString = getTodayString();
+
+            if (lastCompletedDate === todayString) {
+                return;
+            }
+
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayString = yesterday.toDateString();
+
+            if (lastCompletedDate === yesterdayString || currentStreak === 0) {
+                currentStreak++;
+            } else {
+                currentStreak = 1;
+            }
+
+            lastCompletedDate = todayString;
+
+            document.querySelector('.container').classList.add('completion-animation');
+            setTimeout(() => {
+                document.querySelector('.container').classList.remove('completion-animation');
+            }, 600);
+
+            updateDisplay();
+        }
+
+        document.getElementById('doneButton').addEventListener('click', completeTask);
+
+        updateDisplay();
+    </script>
+</body>
+</html>
