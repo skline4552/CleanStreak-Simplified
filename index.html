@@ -3629,6 +3629,31 @@
             }
         }
 
+        /**
+         * Load/reload dashboard data after onboarding or configuration changes
+         * Refreshes the current task display to show rotation-based tasks
+         */
+        async function loadDashboard() {
+            try {
+                // Check if user has configured rooms
+                const roomsResponse = await RoomAPI.getUserRooms();
+                const hasRooms = roomsResponse.rooms && roomsResponse.rooms.length > 0;
+
+                // Update app state
+                AppState.user.hasConfiguredRooms = hasRooms;
+                saveState();
+
+                // Refresh the task display
+                await updateDisplay();
+
+                console.log('Dashboard loaded successfully', { hasRooms });
+            } catch (error) {
+                console.error('Failed to load dashboard:', error);
+                // Still try to update display even if room check fails
+                await updateDisplay();
+            }
+        }
+
         async function completeTask() {
             const task = AppState.currentTask;
             const todayString = getTodayString();
