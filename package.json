@@ -1,0 +1,14 @@
+{
+  "name": "cleanstreak-frontend",
+  "version": "1.0.0",
+  "description": "CleanStreak frontend static server",
+  "scripts": {
+    "start": "sh start-frontend.sh"
+  },
+  "keywords": [
+    "cleanstreak",
+    "frontend"
+  ],
+  "author": "CleanStreak",
+  "license": "MIT"
+}
