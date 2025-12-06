@@ -4,9 +4,9 @@
   "description": "Backend API for CleanStreak habit tracking application with user authentication",
   "main": "src/app.js",
   "scripts": {
-    "start": "node src/app.js",
+    "start": "npx prisma migrate deploy && node src/app.js",
     "dev": "nodemon src/app.js",
-    "build": "prisma generate && prisma migrate deploy",
+    "build": "prisma generate",
     "postinstall": "prisma generate",
     "test": "jest",
     "test:watch": "jest --watch",
