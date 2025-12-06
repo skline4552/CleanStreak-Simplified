@@ -778,16 +778,17 @@ class UserController {
       const result = await this.accountService.deleteUserAccount(userId, userEmail);
 
       // Clear authentication cookies
+      const isProduction = process.env.NODE_ENV === 'production';
       res.clearCookie('accessToken', {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict'
+        secure: isProduction,
+        sameSite: isProduction ? 'none' : 'lax'
       });
 
       res.clearCookie('refreshToken', {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict'
+        secure: isProduction,
+        sameSite: isProduction ? 'none' : 'lax'
       });
 
       res.status(200).json({

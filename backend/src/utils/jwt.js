@@ -254,12 +254,14 @@ function extractRefreshToken(req) {
  * @returns {Object} Cookie configuration
  */
 function generateCookieOptions(options = {}) {
+  const isProduction = process.env.NODE_ENV === 'production';
+
   return {
     ...jwtConfig.cookieOptions,
     ...options,
     httpOnly: true, // Always enforce httpOnly for security
-    secure: process.env.NODE_ENV === 'production', // Always use secure in production
-    sameSite: 'strict' // Always use strict for security
+    secure: isProduction, // Always use secure in production (required for sameSite: 'none')
+    sameSite: isProduction ? 'none' : 'lax' // Use 'none' for cross-domain in production, 'lax' for development
   };
 }
 
