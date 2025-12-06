@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "CleanStreak frontend static server",
   "scripts": {
-    "start": "npx serve index.html -p 8000"
+    "start": "npx serve . -p 8000 -s"
   },
   "keywords": [
     "cleanstreak",
