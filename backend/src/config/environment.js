@@ -11,7 +11,7 @@ const config = {
   // Application settings
   NODE_ENV,
   PORT: parseInt(process.env.PORT, 10) || 3000,
-  HOST: process.env.HOST || 'localhost',
+  HOST: process.env.HOST || '0.0.0.0',
 
   // Database configuration
   DATABASE_URL: process.env.DATABASE_URL || getDatabaseUrl(),
