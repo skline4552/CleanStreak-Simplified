@@ -1834,11 +1834,11 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="customRoomName">Custom Name</label>
+                            <label for="customRoomName">Custom Name (Optional)</label>
                             <input type="text" id="customRoomName"
-                                   placeholder="e.g., Master Bedroom"
-                                   maxlength="50" required>
-                            <small class="form-hint">Give this room a specific name (e.g., "Master Bedroom", "Guest Bathroom")</small>
+                                   placeholder="Leave empty to use default name (e.g., Living Room)"
+                                   maxlength="50">
+                            <small class="form-hint">Optional: Add a specific name only if you have multiple rooms of the same type (e.g., "Master Bedroom", "Guest Bathroom")</small>
                         </div>
 
                         <div class="form-group checkbox-group">
@@ -1941,10 +1941,11 @@
                             </div>
 
                             <div class="form-group">
-                                <label for="customRoomNameSettings">Custom Name</label>
+                                <label for="customRoomNameSettings">Custom Name (Optional)</label>
                                 <input type="text" id="customRoomNameSettings"
-                                       placeholder="e.g., Master Bedroom"
-                                       maxlength="50" required>
+                                       placeholder="Leave empty to use default name (e.g., Living Room)"
+                                       maxlength="50">
+                                <small class="form-hint">Optional: Add a specific name only if you have multiple rooms of the same type</small>
                             </div>
 
                             <div class="form-group checkbox-group">
@@ -3932,6 +3933,34 @@
         }
 
         /**
+         * Generate a unique room name based on room type and existing rooms
+         * If the default name (e.g., "Living Room") is already taken, appends a number
+         * @param {string} roomType - The room type (e.g., "living_room")
+         * @param {Array} existingRooms - Array of existing room objects
+         * @returns {string} A unique room name
+         */
+        function generateUniqueRoomName(roomType, existingRooms) {
+            const baseName = formatRoomType(roomType);
+            const existingNames = existingRooms.map(room => room.custom_name.toLowerCase());
+
+            // Check if the base name is available
+            if (!existingNames.includes(baseName.toLowerCase())) {
+                return baseName;
+            }
+
+            // If base name exists, find the next available number
+            let counter = 2;
+            let uniqueName;
+
+            do {
+                uniqueName = `${baseName} ${counter}`;
+                counter++;
+            } while (existingNames.includes(uniqueName.toLowerCase()));
+
+            return uniqueName;
+        }
+
+        /**
          * Show onboarding modal
          */
         function showOnboardingModal() {
@@ -4012,9 +4041,17 @@
         async function handleRoomFormSubmit(event) {
             event.preventDefault();
 
+            const roomType = document.getElementById('roomType').value;
+            let customName = document.getElementById('customRoomName').value.trim();
+
+            // If custom name is empty, generate a unique name based on room type
+            if (!customName) {
+                customName = generateUniqueRoomName(roomType, OnboardingState.rooms);
+            }
+
             const roomData = {
-                roomType: document.getElementById('roomType').value,
-                customName: document.getElementById('customRoomName').value.trim(),
+                roomType,
+                customName,
                 hasGlass: document.getElementById('hasGlass').checked
             };
 
@@ -4820,9 +4857,14 @@
             event.preventDefault();
 
             const roomType = document.getElementById('roomTypeSettings').value;
-            const customName = document.getElementById('customRoomNameSettings').value.trim();
+            let customName = document.getElementById('customRoomNameSettings').value.trim();
             const hasGlass = document.getElementById('hasGlassSettings').checked;
             const autoAddKeystones = document.getElementById('autoAddKeystonesSettings').checked;
+
+            // If custom name is empty, generate a unique name based on room type
+            if (!customName) {
+                customName = generateUniqueRoomName(roomType, SettingsState.rooms);
+            }
 
             try {
                 const response = await RoomAPI.createRoom({ roomType, customName, hasGlass });
