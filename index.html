@@ -455,6 +455,15 @@
             margin-top: 6px;
         }
 
+        .form-help {
+            display: block;
+            color: #6c757d;
+            font-size: 0.75rem;
+            margin-top: 4px;
+            margin-left: 30px;
+            font-style: italic;
+        }
+
         .form-error {
             background: #fff5f5;
             color: #e53e3e;
@@ -1943,6 +1952,14 @@
                                     <input type="checkbox" id="hasGlassSettings" checked>
                                     <span>This room has mirrors or windows</span>
                                 </label>
+                            </div>
+
+                            <div class="form-group checkbox-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="autoAddKeystonesSettings" checked>
+                                    <span>Automatically add keystone tasks for this room</span>
+                                </label>
+                                <small class="form-help">High-frequency hygiene points like sinks, toilets, and stovetops</small>
                             </div>
 
                             <div class="form-actions">
@@ -4805,6 +4822,7 @@
             const roomType = document.getElementById('roomTypeSettings').value;
             const customName = document.getElementById('customRoomNameSettings').value.trim();
             const hasGlass = document.getElementById('hasGlassSettings').checked;
+            const autoAddKeystones = document.getElementById('autoAddKeystonesSettings').checked;
 
             try {
                 const response = await RoomAPI.createRoom({ roomType, customName, hasGlass });
@@ -4813,28 +4831,38 @@
                     const newRoom = response.room;
                     SettingsState.rooms.push(newRoom);
 
-                    // Auto-generate and add keystones for this room
-                    try {
-                        const applicableKeystones = getApplicableKeystones([newRoom]);
+                    let keystonesAdded = 0;
 
-                        if (applicableKeystones.length > 0) {
-                            await KeystoneAPI.addKeystonesForRoom(applicableKeystones);
-                            console.log(`Added ${applicableKeystones.length} keystone(s) for ${customName}`);
+                    // Add keystones if user opted in
+                    if (autoAddKeystones) {
+                        try {
+                            const applicableKeystones = getApplicableKeystones([newRoom]);
 
-                            // Refresh keystones list in settings
-                            const keystonesResponse = await KeystoneAPI.getUserKeystones();
-                            SettingsState.keystones = keystonesResponse.keystone_tasks || [];
-                            renderKeystonesList();
+                            if (applicableKeystones.length > 0) {
+                                await KeystoneAPI.addKeystonesForRoom(applicableKeystones);
+                                keystonesAdded = applicableKeystones.length;
+                                console.log(`Added ${keystonesAdded} keystone(s) for ${customName}`);
+
+                                // Refresh keystones list in settings
+                                const keystonesResponse = await KeystoneAPI.getUserKeystones();
+                                SettingsState.keystones = keystonesResponse.keystone_tasks || [];
+                                renderKeystonesList();
+                            }
+                        } catch (keystoneError) {
+                            // Don't fail the whole operation if keystone creation fails
+                            console.error('Failed to add keystones for room:', keystoneError);
                         }
-                    } catch (keystoneError) {
-                        // Don't fail the whole operation if keystone creation fails
-                        console.error('Failed to add keystones for room:', keystoneError);
                     }
 
                     renderSettingsRoomsList();
                     hideAddRoomForm();
                     SettingsState.hasUnsavedChanges = false; // Room already saved via API
-                    showNotification('Room added successfully!', 'success', 3000);
+
+                    // Show notification with keystone count
+                    const message = keystonesAdded > 0
+                        ? `Room added successfully! ${keystonesAdded} keystone task(s) added.`
+                        : 'Room added successfully!';
+                    showNotification(message, 'success', 3000);
                 }
             } catch (error) {
                 console.error('Failed to add room:', error);
