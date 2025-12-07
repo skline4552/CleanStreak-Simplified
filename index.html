@@ -2524,6 +2524,21 @@
             },
 
             /**
+             * Add keystones for a specific room
+             * @param {Array} keystones - Array of keystone objects with task_type and custom_name
+             * @returns {Promise<object>} Created keystones data
+             */
+            async addKeystonesForRoom(keystones) {
+                return apiRequest('/keystone-tasks/add-for-room', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ keystones })
+                });
+            },
+
+            /**
              * Update a keystone task
              * @param {string} keystoneId - Keystone task ID
              * @param {object} updates - Update data
@@ -4795,7 +4810,27 @@
                 const response = await RoomAPI.createRoom({ roomType, customName, hasGlass });
 
                 if (response.success && response.room) {
-                    SettingsState.rooms.push(response.room);
+                    const newRoom = response.room;
+                    SettingsState.rooms.push(newRoom);
+
+                    // Auto-generate and add keystones for this room
+                    try {
+                        const applicableKeystones = getApplicableKeystones([newRoom]);
+
+                        if (applicableKeystones.length > 0) {
+                            await KeystoneAPI.addKeystonesForRoom(applicableKeystones);
+                            console.log(`Added ${applicableKeystones.length} keystone(s) for ${customName}`);
+
+                            // Refresh keystones list in settings
+                            const keystonesResponse = await KeystoneAPI.getUserKeystones();
+                            SettingsState.keystones = keystonesResponse.keystone_tasks || [];
+                            renderKeystonesList();
+                        }
+                    } catch (keystoneError) {
+                        // Don't fail the whole operation if keystone creation fails
+                        console.error('Failed to add keystones for room:', keystoneError);
+                    }
+
                     renderSettingsRoomsList();
                     hideAddRoomForm();
                     SettingsState.hasUnsavedChanges = false; // Room already saved via API

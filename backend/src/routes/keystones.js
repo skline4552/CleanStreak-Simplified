@@ -25,6 +25,14 @@ router.get('/', KeystoneController.getUserKeystones);
 router.post('/initialize', userLimiters.roomConfig, KeystoneController.initializeKeystones);
 
 /**
+ * @route   POST /api/keystone-tasks/add-for-room
+ * @desc    Add keystones for a specific room
+ * @access  Private
+ * @body    { keystones: Array<{ task_type: string, custom_name?: string }> }
+ */
+router.post('/add-for-room', userLimiters.roomConfig, KeystoneController.addKeystonesForRoom);
+
+/**
  * @route   PUT /api/keystone-tasks/:id
  * @desc    Update a keystone task configuration
  * @access  Private

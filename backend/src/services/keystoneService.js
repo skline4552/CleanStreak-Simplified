@@ -287,6 +287,54 @@ class KeystoneService {
   }
 
   /**
+   * Add keystones for a specific room
+   * @param {string} userId - User ID
+   * @param {Array} keystoneData - Array of keystone objects with task_type, custom_name, room_id
+   * @returns {Promise<Array>} Array of created keystone objects
+   */
+  async addKeystonesForRoom(userId, keystoneData) {
+    // Validate input
+    if (!keystoneData || keystoneData.length === 0) {
+      return [];
+    }
+
+    // Get user's current keystones to determine next sort_order
+    const existingKeystones = await this.getUserKeystones(userId);
+    const maxSortOrder = existingKeystones.length > 0
+      ? Math.max(...existingKeystones.map(k => k.sort_order))
+      : 0;
+
+    // Create keystones from provided data
+    const keystones = keystoneData.map((keystone, index) => ({
+      id: createId(),
+      user_id: userId,
+      task_type: keystone.task_type,
+      custom_name: keystone.custom_name || null,
+      is_active: true,  // New room keystones are active by default
+      sort_order: maxSortOrder + index + 1
+    }));
+
+    // Batch create
+    await this.prisma.user_keystone_tasks.createMany({
+      data: keystones
+    });
+
+    // Mark user as having pending config changes
+    await this.markPendingConfigChanges(userId);
+
+    // Return the newly created keystones
+    const createdKeystones = await this.prisma.user_keystone_tasks.findMany({
+      where: {
+        user_id: userId,
+        task_type: { in: keystoneData.map(k => k.task_type) }
+      },
+      orderBy: { sort_order: 'asc' }
+    });
+
+    return createdKeystones;
+  }
+
+  /**
    * Get default keystone types
    * @returns {string[]} Array of default keystone types
    */

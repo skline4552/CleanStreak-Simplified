@@ -164,6 +164,57 @@ class KeystoneController {
       });
     }
   }
+
+  /**
+   * Add keystones for a specific room
+   * POST /api/keystone-tasks/add-for-room
+   */
+  static async addKeystonesForRoom(req, res) {
+    try {
+      const { userId } = req.user;
+      const { keystones } = req.body;
+
+      // Validate keystones
+      if (!keystones || !Array.isArray(keystones)) {
+        return res.status(400).json({
+          error: 'Validation failed',
+          message: 'keystones must be an array'
+        });
+      }
+
+      // Validate each keystone object
+      for (const keystone of keystones) {
+        if (!keystone.task_type || typeof keystone.task_type !== 'string') {
+          return res.status(400).json({
+            error: 'Validation failed',
+            message: 'Each keystone must have a task_type string'
+          });
+        }
+
+        if (keystone.custom_name && typeof keystone.custom_name !== 'string') {
+          return res.status(400).json({
+            error: 'Validation failed',
+            message: 'custom_name must be a string if provided'
+          });
+        }
+      }
+
+      const result = await keystoneService.addKeystonesForRoom(userId, keystones);
+
+      res.status(201).json({
+        success: true,
+        keystone_tasks: result,
+        message: 'Keystone tasks added successfully. Changes will apply after completing current cycle.'
+      });
+
+    } catch (error) {
+      console.error('Add keystones for room error:', error);
+      res.status(500).json({
+        error: 'Internal server error',
+        message: 'Failed to add keystone tasks. Please try again.'
+      });
+    }
+  }
 }
 
 module.exports = KeystoneController;
