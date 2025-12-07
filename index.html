@@ -2736,14 +2736,25 @@
                     }
                     // Add more action types here as needed
                 } catch (error) {
-                    console.error('Failed to process offline action:', queuedAction, error);
-                    queuedAction.retryCount++;
+                    // Check if it's a 409 "already completed" error
+                    const isAlreadyCompleted = error.response?.status === 409 ||
+                                              error.message?.includes('already completed');
 
-                    // Keep in queue if retry count < 3, otherwise drop it
-                    if (queuedAction.retryCount < 3) {
-                        failedActions.push(queuedAction);
+                    if (isAlreadyCompleted) {
+                        // 409 means task is already completed - treat as success
+                        successfulActions.push(queuedAction);
+                        console.log('Task already completed (409), removing from queue:', queuedAction.payload.taskDescription);
                     } else {
-                        console.warn('Dropping action after 3 failed retries:', queuedAction);
+                        // For other errors, retry up to 3 times
+                        console.error('Failed to process offline action:', queuedAction, error);
+                        queuedAction.retryCount = (queuedAction.retryCount || 0) + 1;
+
+                        // Keep in queue if retry count < 3, otherwise drop it
+                        if (queuedAction.retryCount < 3) {
+                            failedActions.push(queuedAction);
+                        } else {
+                            console.warn('Dropping action after 3 failed retries:', queuedAction);
+                        }
                     }
                 }
             }
