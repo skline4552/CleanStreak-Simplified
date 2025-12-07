@@ -8,6 +8,7 @@ const {
   setAuthCookies,
   clearAuthCookies
 } = require('../utils/jwt');
+const { prisma } = require('../config/prisma');
 
 /**
  * Authentication Middleware
@@ -39,13 +40,39 @@ const authenticate = async (req, res, next) => {
     // Verify and decode the token
     const decoded = verifyAccessToken(token);
 
+    // Validate token version against database (session invalidation security)
+    if (typeof decoded.tokenVersion === 'number') {
+      const user = await prisma.users.findUnique({
+        where: { id: decoded.userId },
+        select: { token_version: true }
+      });
+
+      if (!user) {
+        return res.status(401).json({
+          error: 'Authentication failed',
+          code: 'USER_NOT_FOUND',
+          message: 'User account not found'
+        });
+      }
+
+      // If token version doesn't match, session has been invalidated
+      if (decoded.tokenVersion !== user.token_version) {
+        return res.status(401).json({
+          error: 'Session invalidated',
+          code: 'TOKEN_VERSION_MISMATCH',
+          message: 'Your session has been invalidated. Please login again.'
+        });
+      }
+    }
+
     // Add user information to request object
     req.user = {
       userId: decoded.userId,
       email: decoded.email,
       jti: decoded.jti,
       iat: decoded.iat,
-      exp: decoded.exp
+      exp: decoded.exp,
+      tokenVersion: decoded.tokenVersion
     };
 
     // Add token metadata
@@ -53,7 +80,8 @@ const authenticate = async (req, res, next) => {
       type: 'access',
       jti: decoded.jti,
       issuedAt: new Date(decoded.iat * 1000),
-      expiresAt: new Date(decoded.exp * 1000)
+      expiresAt: new Date(decoded.exp * 1000),
+      tokenVersion: decoded.tokenVersion
     };
 
     next();

@@ -90,6 +90,14 @@ router.post('/change-password',
   userController.changePassword
 );
 
+// Logout from all devices (invalidate all sessions)
+// POST /api/user/logout-all
+// Rate limited for security
+router.post('/logout-all',
+  authRateLimit({ type: 'general', max: 5, windowMs: 60 * 60 * 1000 }), // 5 per hour
+  userController.logoutAllDevices
+);
+
 // Delete user account and all associated data
 // DELETE /api/user/account
 // Very restrictive rate limiting for security

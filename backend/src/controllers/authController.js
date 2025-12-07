@@ -62,10 +62,11 @@ class AuthController {
         }
       });
 
-      // Generate JWT tokens
+      // Generate JWT tokens (user.token_version defaults to 1 from schema)
       const tokens = generateTokenPair({
         userId: user.id,
-        email: user.email
+        email: user.email,
+        tokenVersion: user.token_version || 1
       });
 
       // Create session record
@@ -131,9 +132,19 @@ class AuthController {
       // Sanitize email
       const sanitizedEmail = sanitizeString(email?.toLowerCase());
 
-      // Find user
+      // Find user (include token_version for security)
       const user = await prisma.users.findUnique({
-        where: { email: sanitizedEmail }
+        where: { email: sanitizedEmail },
+        select: {
+          id: true,
+          email: true,
+          password_hash: true,
+          token_version: true,
+          created_at: true,
+          last_login: true,
+          email_verified: true,
+          email_verified_at: true
+        }
       });
 
       if (!user) {
@@ -170,10 +181,11 @@ class AuthController {
         data: { is_active: false }
       });
 
-      // Generate new JWT tokens
+      // Generate new JWT tokens with current token version
       const tokens = generateTokenPair({
         userId: user.id,
-        email: user.email
+        email: user.email,
+        tokenVersion: user.token_version || 1
       });
 
       // Create new session record
@@ -273,7 +285,7 @@ class AuthController {
         });
       }
 
-      // Find active session
+      // Find active session (include token_version for security)
       const session = await prisma.user_sessions.findFirst({
         where: {
           user_id: decoded.userId,
@@ -288,6 +300,7 @@ class AuthController {
             select: {
               id: true,
               email: true,
+              token_version: true,
               created_at: true,
               last_login: true
             }
@@ -303,10 +316,11 @@ class AuthController {
         });
       }
 
-      // Generate new token pair
+      // Generate new token pair with current token version
       const tokens = generateTokenPair({
         userId: session.users.id,
-        email: session.users.email
+        email: session.users.email,
+        tokenVersion: session.users.token_version || 1
       });
 
       // Update session with new refresh token

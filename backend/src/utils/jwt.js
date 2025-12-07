@@ -11,7 +11,7 @@ const { jwtConfig } = require('../config/auth');
 
 /**
  * Generate a cryptographically secure access token
- * @param {Object} payload - Token payload (user data)
+ * @param {Object} payload - Token payload (user data including tokenVersion)
  * @param {Object} options - Additional token options
  * @returns {Object} Token data with expiration info
  */
@@ -20,6 +20,16 @@ function generateAccessToken(payload, options = {}) {
     // Ensure payload is valid
     if (!payload || typeof payload !== 'object') {
       throw new Error('Invalid payload provided for access token generation');
+    }
+
+    // Validate required fields for security
+    if (!payload.userId) {
+      throw new Error('userId is required in token payload');
+    }
+
+    // tokenVersion is required for session invalidation security
+    if (typeof payload.tokenVersion !== 'number') {
+      throw new Error('tokenVersion is required in token payload');
     }
 
     // Generate unique token ID for tracking
@@ -365,9 +375,10 @@ function validateTokenPayload(payload) {
     return false;
   }
 
-  // Required fields for access tokens
-  const requiredFields = ['userId'];
-  return requiredFields.every(field => payload.hasOwnProperty(field));
+  // Required fields for access tokens (including tokenVersion for security)
+  const requiredFields = ['userId', 'tokenVersion'];
+  return requiredFields.every(field => payload.hasOwnProperty(field)) &&
+         typeof payload.tokenVersion === 'number';
 }
 
 /**

@@ -30,6 +30,7 @@ class UserController {
     this.exportData = this.exportData.bind(this);
     this.deleteAccount = this.deleteAccount.bind(this);
     this.changePassword = this.changePassword.bind(this);
+    this.logoutAllDevices = this.logoutAllDevices.bind(this);
   }
 
   /**
@@ -658,7 +659,7 @@ class UserController {
       try {
         const user = await prisma.users.findUnique({
           where: { id: userId },
-          select: { id: true, email: true, password_hash: true }
+          select: { id: true, email: true, password_hash: true, token_version: true }
         });
 
         if (!user) {
@@ -692,13 +693,20 @@ class UserController {
         // Hash new password
         const newPasswordHash = await hashPassword(newPassword);
 
-        // Update password in database
+        // Update password and increment token_version (invalidates all sessions)
         await prisma.users.update({
           where: { id: userId },
           data: {
             password_hash: newPasswordHash,
+            token_version: (user.token_version || 1) + 1,
             updated_at: new Date()
           }
+        });
+
+        // Deactivate all existing sessions (logout from all devices)
+        await prisma.user_sessions.updateMany({
+          where: { user_id: userId },
+          data: { is_active: false }
         });
 
         res.status(200).json({
@@ -723,6 +731,64 @@ class UserController {
         error: 'Internal server error',
         code: 'PASSWORD_CHANGE_ERROR',
         message: 'Failed to change password'
+      });
+    }
+  }
+
+  /**
+   * Logout from all devices (invalidate all sessions)
+   * POST /api/user/logout-all
+   */
+  async logoutAllDevices(req, res) {
+    try {
+      const userId = req.user.userId;
+
+      // Get user from database
+      const { PrismaClient } = require('@prisma/client');
+      const prisma = new PrismaClient();
+
+      try {
+        const user = await prisma.users.findUnique({
+          where: { id: userId },
+          select: { id: true, email: true, token_version: true }
+        });
+
+        if (!user) {
+          return res.status(404).json({
+            error: 'Not found',
+            code: 'USER_NOT_FOUND',
+            message: 'User account not found'
+          });
+        }
+
+        // Increment token_version (invalidates all tokens)
+        await prisma.users.update({
+          where: { id: userId },
+          data: {
+            token_version: (user.token_version || 1) + 1,
+            updated_at: new Date()
+          }
+        });
+
+        // Deactivate all existing sessions
+        await prisma.user_sessions.updateMany({
+          where: { user_id: userId },
+          data: { is_active: false }
+        });
+
+        res.status(200).json({
+          success: true,
+          message: 'Successfully logged out from all devices. Please login again to continue.'
+        });
+      } finally {
+        await prisma.$disconnect();
+      }
+    } catch (error) {
+      console.error('Error in logoutAllDevices:', error);
+      res.status(500).json({
+        error: 'Internal server error',
+        code: 'LOGOUT_ALL_ERROR',
+        message: 'Failed to logout from all devices'
       });
     }
   }
