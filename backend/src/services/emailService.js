@@ -72,8 +72,13 @@ class EmailService {
       });
 
       if (error) {
-        console.error('Resend API error:', error);
-        throw new Error('Failed to send verification email');
+        console.error('Resend API error:', JSON.stringify(error, null, 2));
+        console.error('Error details:', {
+          name: error.name,
+          message: error.message,
+          statusCode: error.statusCode
+        });
+        throw new Error(`Failed to send verification email: ${error.message || 'Unknown error'}`);
       }
 
       console.log('Verification email sent:', data.id);

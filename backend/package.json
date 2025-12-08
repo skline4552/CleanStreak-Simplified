@@ -4,7 +4,8 @@
   "description": "Backend API for CleanStreak habit tracking application with user authentication",
   "main": "src/app.js",
   "scripts": {
-    "start": "npx prisma db push --skip-generate --accept-data-loss && node src/app.js",
+    "start": "node src/app.js",
+    "start:migrate": "npx prisma db push --skip-generate --accept-data-loss && node src/app.js",
     "dev": "nodemon src/app.js",
     "build": "prisma generate",
     "postinstall": "prisma generate",
