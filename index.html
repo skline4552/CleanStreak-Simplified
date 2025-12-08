@@ -2205,7 +2205,7 @@
          * @param {object} options - Fetch options (method, body, etc.)
          * @returns {Promise<object>} Response data
          */
-        async function apiRequest(endpoint, options = {}) {
+        async function apiRequest(endpoint, options = {}, isRetry = false) {
             const url = `${API_BASE_URL}${endpoint}`;
 
             const defaultOptions = {
@@ -2246,6 +2246,23 @@
 
                 // Handle non-OK responses
                 if (!response.ok) {
+                    // Handle 401 Unauthorized - attempt token refresh
+                    if (response.status === 401 && !isRetry && AppState.user.isAuthenticated) {
+                        console.log('Received 401 error - attempting token refresh');
+
+                        const refreshSuccess = await refreshAccessToken();
+
+                        if (refreshSuccess) {
+                            // Retry the original request with refreshed token
+                            console.log('Token refreshed - retrying original request');
+                            return apiRequest(endpoint, options, true); // Pass isRetry=true to prevent infinite loop
+                        } else {
+                            // Refresh failed - session expired
+                            await handleSessionExpired();
+                            throw new Error('Session expired. Please log in again.');
+                        }
+                    }
+
                     // Extract error message from various response formats
                     let errorMessage = data.message || data.error || `HTTP ${response.status}`;
 
@@ -2275,6 +2292,60 @@
                 // Re-throw API errors with message
                 throw error;
             }
+        }
+
+        /**
+         * Refresh the access token using the refresh token
+         * @returns {Promise<boolean>} True if refresh succeeds, false otherwise
+         */
+        async function refreshAccessToken() {
+            try {
+                console.log('Attempting to refresh access token...');
+
+                // Call refresh endpoint - new tokens set automatically via cookies
+                const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+                    method: 'POST',
+                    credentials: 'include', // Include refresh token cookie
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    console.log('Access token refreshed successfully');
+                    return true;
+                }
+
+                console.warn('Token refresh failed:', response.status);
+                return false;
+            } catch (error) {
+                console.error('Token refresh error:', error);
+                return false;
+            }
+        }
+
+        /**
+         * Handle session expiration - log user out gracefully
+         */
+        async function handleSessionExpired() {
+            console.log('Session expired - logging out user');
+
+            // Clear authentication state
+            AppState.user.isAuthenticated = false;
+            AppState.user.profile = null;
+            AppState.user.email = null;
+
+            // Clear persisted state
+            clearState();
+
+            // Update UI
+            updateAuthUI();
+
+            // Show notification
+            showNotification('Your session has expired. Please log in again.', 'info', 5000);
+
+            // Show login modal
+            showAuthModal('login');
         }
 
         /**
@@ -3670,6 +3741,39 @@
                 document.getElementById('doneButton').classList.remove('completed');
                 document.getElementById('doneButton').disabled = false;
                 document.getElementById('completedMessage').style.display = 'none';
+            }
+        }
+
+        /**
+         * Validate user session on app initialization
+         * Verifies JWT token is valid by calling the API
+         * Handles token refresh automatically if needed
+         */
+        async function validateSession() {
+            if (!AppState.user.isAuthenticated) {
+                console.log('No authenticated session to validate');
+                return;
+            }
+
+            console.log('Validating session...');
+
+            try {
+                // Try to fetch user profile to validate session
+                const profileData = await UserAPI.getProfile();
+
+                // Session is valid - update profile data
+                AppState.user.profile = profileData.user || profileData;
+                AppState.user.email = profileData.user?.email || profileData.email;
+                saveState();
+
+                console.log('Session validated successfully');
+            } catch (error) {
+                console.error('Session validation failed:', error);
+
+                // If we get here, either:
+                // 1. Token refresh was attempted and failed (handleSessionExpired was called)
+                // 2. Some other error occurred
+                // In either case, the user has been logged out by the error handler
             }
         }
 
@@ -5354,6 +5458,22 @@
         // Load state on page load
         loadState();
 
+        // Validate session if user appears to be authenticated
+        if (AppState.user.isAuthenticated) {
+            // Validate the session with the server
+            // This will automatically handle token refresh if needed
+            validateSession().then(() => {
+                // After validation, start background processes
+                startBackgroundSync();
+                startConnectivityMonitoring();
+                // Phase 7: Check migration status on app load
+                checkMigrationStatus();
+            }).catch(error => {
+                console.error('Session validation error during init:', error);
+                // Error already handled by validateSession/handleSessionExpired
+            });
+        }
+
         // Update UI to match authentication state
         updateAuthUI();
 
@@ -5362,14 +5482,6 @@
 
         // Initialize sync queue indicator
         updateSyncQueueIndicator();
-
-        // Start background sync if user is authenticated
-        if (AppState.user.isAuthenticated) {
-            startBackgroundSync();
-            startConnectivityMonitoring();
-            // Phase 7: Check migration status on app load
-            checkMigrationStatus();
-        }
 
         // Network status monitoring with enhanced offline handling
         window.addEventListener('online', handleOnline);
