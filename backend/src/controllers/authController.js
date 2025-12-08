@@ -85,6 +85,17 @@ class AuthController {
       // Set HTTP-only cookies
       setAuthCookies(res, tokens.accessToken.token, tokens.refreshToken.token);
 
+      // Generate and send verification email (non-blocking)
+      try {
+        const emailService = require('../services/emailService');
+        const verificationToken = await emailService.generateVerificationToken(user.id);
+        await emailService.sendVerificationEmail(user, verificationToken);
+        console.log('Verification email sent to:', user.email);
+      } catch (emailError) {
+        console.error('Failed to send verification email:', emailError);
+        // Don't fail registration if email fails - user can resend later
+      }
+
       // Return success response (exclude password)
       const { password_hash: _, ...userResponse } = user;
 
@@ -407,6 +418,103 @@ class AuthController {
       res.status(500).json({
         error: 'Internal server error',
         message: 'Failed to retrieve user information'
+      });
+    }
+  }
+
+  /**
+   * Verify email address
+   * GET /api/auth/verify-email?token=xxx
+   */
+  static async verifyEmail(req, res) {
+    try {
+      const { token } = req.query;
+
+      if (!token) {
+        return res.status(400).json({
+          error: 'Verification token required',
+          message: 'Please provide a verification token'
+        });
+      }
+
+      const emailService = require('../services/emailService');
+      const user = await emailService.verifyEmailToken(token);
+
+      res.status(200).json({
+        message: 'Email verified successfully',
+        user: {
+          id: user.id,
+          email: user.email,
+          email_verified: true
+        }
+      });
+
+    } catch (error) {
+      console.error('Email verification error:', error);
+
+      if (error.message.includes('Invalid')) {
+        return res.status(400).json({
+          error: 'Invalid token',
+          message: 'The verification link is invalid'
+        });
+      }
+
+      if (error.message.includes('expired')) {
+        return res.status(400).json({
+          error: 'Token expired',
+          message: 'The verification link has expired. Please request a new one.'
+        });
+      }
+
+      res.status(500).json({
+        error: 'Internal server error',
+        message: 'Email verification failed. Please try again.'
+      });
+    }
+  }
+
+  /**
+   * Resend verification email
+   * POST /api/auth/resend-verification
+   */
+  static async resendVerification(req, res) {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({
+          error: 'Email required',
+          message: 'Please provide your email address'
+        });
+      }
+
+      const emailService = require('../services/emailService');
+      await emailService.resendVerificationEmail(email);
+
+      res.status(200).json({
+        message: 'Verification email sent successfully'
+      });
+
+    } catch (error) {
+      console.error('Resend verification error:', error);
+
+      if (error.message.includes('not found')) {
+        // Don't reveal if email exists (security)
+        return res.status(200).json({
+          message: 'If that email is registered, a verification link has been sent'
+        });
+      }
+
+      if (error.message.includes('already verified')) {
+        return res.status(400).json({
+          error: 'Already verified',
+          message: 'This email address is already verified'
+        });
+      }
+
+      res.status(500).json({
+        error: 'Internal server error',
+        message: 'Failed to send verification email. Please try again.'
       });
     }
   }

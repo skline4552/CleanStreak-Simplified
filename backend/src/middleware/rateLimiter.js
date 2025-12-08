@@ -150,6 +150,18 @@ const authLimiters = {
       const userId = req.user?.userId || 'anonymous';
       return `refresh-${ip}-${userId}`;
     }
+  }),
+
+  // Email verification resend attempts
+  verificationResend: createRateLimiter({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 5, // 5 resend attempts per hour
+    message: 'Too many verification email requests, please try again later.',
+    keyGenerator: (req) => {
+      const ip = req.ip || req.connection.remoteAddress || 'unknown';
+      const email = req.body?.email || 'no-email';
+      return `verification-${ip}-${email}`;
+    }
   })
 };
 

@@ -1,6 +1,7 @@
 const express = require('express');
 const AuthController = require('../controllers/authController');
 const { authenticate, optionalAuth } = require('../middleware/auth');
+const { authLimiters } = require('../middleware/rateLimiter');
 
 const router = express.Router();
 
@@ -45,6 +46,22 @@ router.post('/refresh', AuthController.refresh);
  */
 router.get('/me', authenticate, AuthController.me);
 
+/**
+ * @route   GET /api/auth/verify-email
+ * @desc    Verify email address with token
+ * @access  Public
+ * @query   { token }
+ */
+router.get('/verify-email', AuthController.verifyEmail);
+
+/**
+ * @route   POST /api/auth/resend-verification
+ * @desc    Resend email verification link
+ * @access  Public
+ * @body    { email }
+ */
+router.post('/resend-verification', authLimiters.verificationResend, AuthController.resendVerification);
+
 // Health check endpoint for auth service
 router.get('/health', (req, res) => {
   res.status(200).json({
@@ -56,7 +73,9 @@ router.get('/health', (req, res) => {
       'POST /api/auth/login',
       'POST /api/auth/logout',
       'POST /api/auth/refresh',
-      'GET /api/auth/me'
+      'GET /api/auth/me',
+      'GET /api/auth/verify-email',
+      'POST /api/auth/resend-verification'
     ]
   });
 });

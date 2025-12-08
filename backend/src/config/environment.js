@@ -38,6 +38,18 @@ const config = {
   // Security
   BCRYPT_SALT_ROUNDS: parseInt(process.env.BCRYPT_SALT_ROUNDS, 10) || 12,
 
+  // Email configuration
+  EMAIL_HOST: process.env.EMAIL_HOST || 'smtp.gmail.com',
+  EMAIL_PORT: parseInt(process.env.EMAIL_PORT, 10) || 587,
+  EMAIL_SECURE: process.env.EMAIL_SECURE === 'true',
+  EMAIL_USER: process.env.EMAIL_USER,
+  EMAIL_PASSWORD: process.env.EMAIL_PASSWORD,
+  EMAIL_FROM: process.env.EMAIL_FROM || 'CleanStreak <noreply@cleanstreak.com>',
+
+  // Email verification
+  EMAIL_VERIFICATION_URL: process.env.EMAIL_VERIFICATION_URL || 'http://localhost:8080/verify-email',
+  VERIFICATION_TOKEN_EXPIRY_HOURS: parseInt(process.env.VERIFICATION_TOKEN_EXPIRY_HOURS, 10) || 24,
+
   // Logging
   LOG_LEVEL: process.env.LOG_LEVEL || (NODE_ENV === 'production' ? 'info' : 'debug'),
 
