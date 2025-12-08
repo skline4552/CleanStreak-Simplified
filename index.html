@@ -1640,6 +1640,222 @@
                 gap: 10px;
             }
         }
+        /* Email Verification Banner Styles */
+        .verification-banner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+            padding: 12px 20px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 1001;
+            animation: slideDown 0.3s ease;
+            display: none;
+        }
+
+        .verification-banner.show {
+            display: block;
+        }
+
+        .verification-banner-content {
+            max-width: 600px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .verification-banner-icon {
+            font-size: 1.2rem;
+        }
+
+        .verification-banner-text {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .verification-banner-btn {
+            background: white;
+            color: #d97706;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .verification-banner-btn:hover {
+            background: #fef3c7;
+            transform: translateY(-1px);
+        }
+
+        .verification-banner-close {
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0 8px;
+            opacity: 0.8;
+            transition: opacity 0.2s ease;
+        }
+
+        .verification-banner-close:hover {
+            opacity: 1;
+        }
+
+        /* Email Verification Modal Styles */
+        #emailVerificationOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 1002;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        #emailVerificationOverlay.show {
+            display: flex;
+        }
+
+        #emailVerificationModal {
+            background: white;
+            border-radius: 20px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+            animation: slideUp 0.3s ease;
+            padding: 40px 35px;
+            text-align: center;
+            position: relative;
+        }
+
+        .verification-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+
+        .verification-icon.success {
+            color: #10b981;
+        }
+
+        .verification-icon.error {
+            color: #ef4444;
+        }
+
+        .verification-icon.loading {
+            color: #667eea;
+        }
+
+        .verification-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .verification-message {
+            font-size: 1rem;
+            color: #6c757d;
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+
+        .verification-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .verification-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .verification-btn.primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .verification-btn.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .verification-btn.secondary {
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .verification-btn.secondary:hover {
+            background: #dee2e6;
+        }
+
+        .verification-spinner {
+            border: 3px solid #f3f4f6;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Adjust container when banner is visible */
+        body.banner-visible .container {
+            margin-top: 60px;
+        }
+
+        @media (max-width: 480px) {
+            .verification-banner {
+                padding: 10px 15px;
+            }
+
+            .verification-banner-content {
+                gap: 8px;
+            }
+
+            .verification-banner-text {
+                font-size: 0.85rem;
+            }
+
+            #emailVerificationModal {
+                padding: 30px 25px;
+            }
+
+            .verification-title {
+                font-size: 1.5rem;
+            }
+
+            .verification-message {
+                font-size: 0.9rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -2135,6 +2351,25 @@
         </div>
     </div>
 
+    <!-- Email Verification Banner -->
+    <div id="verificationBanner" class="verification-banner">
+        <div class="verification-banner-content">
+            <span class="verification-banner-icon">✉️</span>
+            <span class="verification-banner-text">Please verify your email address to secure your account.</span>
+            <button class="verification-banner-btn" id="resendVerificationBtn">Resend Email</button>
+            <button class="verification-banner-close" id="closeVerificationBanner" aria-label="Close">&times;</button>
+        </div>
+    </div>
+
+    <!-- Email Verification Modal -->
+    <div id="emailVerificationOverlay">
+        <div id="emailVerificationModal">
+            <div id="verificationContent">
+                <!-- Content will be dynamically updated -->
+            </div>
+        </div>
+    </div>
+
     <script>
         // ============================================
         // CONSTANTS AND CONFIGURATION
@@ -2396,6 +2631,29 @@
             async getSession() {
                 return apiRequest('/auth/session', {
                     method: 'GET'
+                });
+            },
+
+            /**
+             * Verify email address with token
+             * @param {string} token - Verification token from email
+             * @returns {Promise<object>} Verification result
+             */
+            async verifyEmail(token) {
+                return apiRequest(`/auth/verify-email?token=${encodeURIComponent(token)}`, {
+                    method: 'GET'
+                });
+            },
+
+            /**
+             * Resend verification email
+             * @param {string} email - User email address
+             * @returns {Promise<object>} Resend confirmation
+             */
+            async resendVerification(email) {
+                return apiRequest('/auth/resend-verification', {
+                    method: 'POST',
+                    body: JSON.stringify({ email })
                 });
             }
         };
@@ -4002,6 +4260,205 @@
         }
 
         // ============================================
+        // EMAIL VERIFICATION LOGIC
+        // ============================================
+
+        /**
+         * Show verification banner for unverified users
+         */
+        function showVerificationBanner() {
+            const banner = document.getElementById('verificationBanner');
+            banner.classList.add('show');
+            document.body.classList.add('banner-visible');
+        }
+
+        /**
+         * Hide verification banner
+         */
+        function hideVerificationBanner() {
+            const banner = document.getElementById('verificationBanner');
+            banner.classList.remove('show');
+            document.body.classList.remove('banner-visible');
+        }
+
+        /**
+         * Show verification modal with dynamic content
+         * @param {string} state - 'loading' | 'success' | 'error'
+         * @param {object} data - Additional data for the modal
+         */
+        function showVerificationModal(state, data = {}) {
+            const overlay = document.getElementById('emailVerificationOverlay');
+            const content = document.getElementById('verificationContent');
+
+            let html = '';
+
+            if (state === 'loading') {
+                html = `
+                    <div class="verification-icon loading">⏳</div>
+                    <h2 class="verification-title">Verifying Email...</h2>
+                    <div class="verification-spinner"></div>
+                    <p class="verification-message">Please wait while we verify your email address.</p>
+                `;
+            } else if (state === 'success') {
+                html = `
+                    <div class="verification-icon success">✓</div>
+                    <h2 class="verification-title">Email Verified!</h2>
+                    <p class="verification-message">
+                        Your email address has been successfully verified. You now have full access to your account.
+                    </p>
+                    <div class="verification-actions">
+                        <button class="verification-btn primary" onclick="closeVerificationModal()">
+                            Continue
+                        </button>
+                    </div>
+                `;
+            } else if (state === 'error') {
+                html = `
+                    <div class="verification-icon error">✗</div>
+                    <h2 class="verification-title">Verification Failed</h2>
+                    <p class="verification-message">
+                        ${data.message || 'The verification link is invalid or has expired. Please request a new verification email.'}
+                    </p>
+                    <div class="verification-actions">
+                        <button class="verification-btn primary" onclick="handleResendFromModal()">
+                            Resend Verification Email
+                        </button>
+                        <button class="verification-btn secondary" onclick="closeVerificationModal()">
+                            Close
+                        </button>
+                    </div>
+                `;
+            }
+
+            content.innerHTML = html;
+            overlay.classList.add('show');
+        }
+
+        /**
+         * Close verification modal
+         */
+        function closeVerificationModal() {
+            const overlay = document.getElementById('emailVerificationOverlay');
+            overlay.classList.remove('show');
+
+            // Reload page to refresh user state
+            window.location.href = window.location.origin + window.location.pathname;
+        }
+
+        /**
+         * Handle email verification from URL token
+         */
+        async function handleEmailVerification() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token');
+
+            if (!token) {
+                return; // No token, nothing to do
+            }
+
+            console.log('Email verification token detected, verifying...');
+            showVerificationModal('loading');
+
+            try {
+                const result = await AuthAPI.verifyEmail(token);
+                console.log('Email verified successfully:', result);
+
+                // Update user state if logged in
+                if (AppState.user.profile) {
+                    AppState.user.profile.email_verified = true;
+                    saveState();
+                }
+
+                // Hide banner if visible
+                hideVerificationBanner();
+
+                // Show success modal
+                showVerificationModal('success');
+
+            } catch (error) {
+                console.error('Email verification failed:', error);
+                showVerificationModal('error', {
+                    message: error.message || 'Verification failed. Please try again.'
+                });
+            }
+        }
+
+        /**
+         * Handle resend verification email
+         */
+        async function handleResendVerification() {
+            const email = AppState.user.profile?.email;
+
+            if (!email) {
+                showNotification('Please log in to resend verification email', 'error');
+                return;
+            }
+
+            const button = document.getElementById('resendVerificationBtn');
+            const originalText = button.textContent;
+            button.disabled = true;
+            button.textContent = 'Sending...';
+
+            try {
+                await AuthAPI.resendVerification(email);
+                showNotification('Verification email sent! Please check your inbox.', 'success', 5000);
+                console.log('Verification email resent to:', email);
+
+                // Optionally hide banner temporarily
+                setTimeout(() => {
+                    button.disabled = false;
+                    button.textContent = originalText;
+                }, 3000);
+
+            } catch (error) {
+                console.error('Failed to resend verification email:', error);
+                showNotification('Failed to send verification email. Please try again later.', 'error');
+                button.disabled = false;
+                button.textContent = originalText;
+            }
+        }
+
+        /**
+         * Handle resend from verification modal
+         */
+        async function handleResendFromModal() {
+            const email = AppState.user.profile?.email || prompt('Please enter your email address:');
+
+            if (!email) {
+                return;
+            }
+
+            showVerificationModal('loading');
+
+            try {
+                await AuthAPI.resendVerification(email);
+                closeVerificationModal();
+                showNotification('Verification email sent! Please check your inbox.', 'success', 5000);
+                console.log('Verification email resent to:', email);
+
+            } catch (error) {
+                console.error('Failed to resend verification email:', error);
+                showVerificationModal('error', {
+                    message: 'Failed to send verification email. Please try again later.'
+                });
+            }
+        }
+
+        /**
+         * Check if user needs to verify email and show banner
+         */
+        function checkAndShowVerificationBanner() {
+            const user = AppState.user.profile;
+
+            if (user && user.email && !user.email_verified) {
+                console.log('User email not verified, showing banner');
+                showVerificationBanner();
+            } else {
+                hideVerificationBanner();
+            }
+        }
+
+        // ============================================
         // ONBOARDING LOGIC
         // ============================================
 
@@ -5261,6 +5718,7 @@
                 AppState.user.profile = {
                     id: response.user.id,
                     email: response.user.email,
+                    email_verified: response.user.email_verified || false,
                     createdAt: response.user.createdAt,
                     preferences: response.user.preferences || {}
                 };
@@ -5285,12 +5743,15 @@
                 updateConnectionStatus();
                 updateSyncQueueIndicator();
 
+                // Show verification banner if email not verified
+                checkAndShowVerificationBanner();
+
                 // Hide modal
                 hideAuthModal();
 
-                // Show success notification
-                showNotification('Account created successfully!', 'success', 3000);
-                console.log('Registration successful!');
+                // Show success notification with verification reminder
+                showNotification('Account created! Please check your email to verify your account.', 'success', 5000);
+                console.log('Registration successful! Verification email sent.');
 
                 // Show onboarding modal to configure rooms
                 setTimeout(() => {
@@ -5339,6 +5800,7 @@
                 AppState.user.profile = {
                     id: response.user.id,
                     email: response.user.email,
+                    email_verified: response.user.email_verified || false,
                     createdAt: response.user.createdAt,
                     preferences: response.user.preferences || {}
                 };
@@ -5362,6 +5824,9 @@
                 updateAuthUI();
                 updateConnectionStatus();
                 updateSyncQueueIndicator();
+
+                // Check verification status and show banner if needed
+                checkAndShowVerificationBanner();
 
                 // Phase 7: Check migration status and show banner if needed
                 await checkMigrationStatus();
@@ -5466,6 +5931,8 @@
                 // After validation, start background processes
                 startBackgroundSync();
                 startConnectivityMonitoring();
+                // Check email verification status and show banner if needed
+                checkAndShowVerificationBanner();
                 // Phase 7: Check migration status on app load
                 checkMigrationStatus();
             }).catch(error => {
@@ -5518,6 +5985,10 @@
                 hideAuthModal();
             }
         });
+
+        // Event listeners - Email Verification
+        document.getElementById('resendVerificationBtn').addEventListener('click', handleResendVerification);
+        document.getElementById('closeVerificationBanner').addEventListener('click', hideVerificationBanner);
 
         // Event listeners - Onboarding
         document.getElementById('roomForm').addEventListener('submit', handleRoomFormSubmit);
@@ -5587,6 +6058,9 @@
                 closeDeleteAccountModal();
             }
         });
+
+        // Handle email verification from URL token (if present)
+        handleEmailVerification();
 
         // Initial display update
         updateDisplay();
