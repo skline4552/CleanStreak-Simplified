@@ -105,9 +105,41 @@ COOKIE_SAME_SITE="lax"
 # Rate Limiting
 RATE_LIMIT_WINDOW_MS=900000
 RATE_LIMIT_MAX_REQUESTS=1000
+
+# Email Configuration (Resend)
+# Get your API key from: https://resend.com/api-keys
+RESEND_API_KEY="your-resend-api-key-here"
+# For development, use Resend's test domain
+EMAIL_FROM="CleanStreak <onboarding@resend.dev>"
+# Email verification settings
+EMAIL_VERIFICATION_URL="http://localhost:8080/verify-email"
+VERIFICATION_TOKEN_EXPIRY_HOURS=24
 ```
 
 **For production**, see [DEPLOYMENT.md](./DEPLOYMENT.md) for PostgreSQL configuration and security best practices.
+
+### Email Service Setup (Resend)
+
+CleanStreak uses [Resend](https://resend.com) for sending email verification emails during user registration.
+
+#### Getting Your Resend API Key:
+
+1. **Sign up** for a free Resend account at [https://resend.com](https://resend.com)
+2. **Get your API key** from [https://resend.com/api-keys](https://resend.com/api-keys)
+3. **Add the API key** to your `backend/.env` file as `RESEND_API_KEY`
+
+#### Development vs Production:
+
+- **Development**: Use Resend's test domain `onboarding@resend.dev` (no verification required)
+- **Production**: Add and verify your own domain in Resend dashboard, then update `EMAIL_FROM` to use your domain
+
+#### Features:
+- ✅ **100 emails/day** free tier (3,000/month)
+- ✅ **No SMTP configuration** required (API-based)
+- ✅ **Excellent deliverability**
+- ✅ **Simple integration**
+
+**Note**: Email verification is optional. If `RESEND_API_KEY` is not set, the application will run without email functionality (users can still register and use the app).
 
 ### Database Setup
 

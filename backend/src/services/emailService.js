@@ -1,4 +1,4 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const { createId } = require('@paralleldrive/cuid2');
 const { prisma } = require('../config/prisma');
 
@@ -6,38 +6,37 @@ const { prisma } = require('../config/prisma');
  * Email Service
  *
  * Handles all email-related functionality including:
- * - Sending verification emails
+ * - Sending verification emails using Resend API
  * - Token generation and validation
  * - Email template rendering
  */
 class EmailService {
   constructor() {
-    this.transporter = null;
-    this.initializeTransporter();
+    this.resend = null;
+    this.initializeResend();
   }
 
   /**
-   * Initialize nodemailer transporter
+   * Initialize Resend client
    */
-  initializeTransporter() {
+  initializeResend() {
     try {
-      // Only initialize if email configuration is present
-      if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
+      // Debug: Log email configuration status
+      console.log('Email configuration check:', {
+        hasResendApiKey: !!process.env.RESEND_API_KEY,
+        emailFrom: process.env.EMAIL_FROM ? 'set' : 'not set'
+      });
+
+      // Only initialize if Resend API key is present
+      if (!process.env.RESEND_API_KEY) {
         console.warn('Email configuration missing - email service disabled');
+        console.warn('Missing: RESEND_API_KEY');
         return;
       }
 
-      this.transporter = nodemailer.createTransport({
-        host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-        port: parseInt(process.env.EMAIL_PORT, 10) || 587,
-        secure: process.env.EMAIL_SECURE === 'true', // true for 465, false for other ports
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASSWORD
-        }
-      });
+      this.resend = new Resend(process.env.RESEND_API_KEY);
 
-      console.log('Email service initialized successfully');
+      console.log('Email service initialized successfully with Resend');
     } catch (error) {
       console.error('Failed to initialize email service:', error);
     }
@@ -47,7 +46,7 @@ class EmailService {
    * Check if email service is available
    */
   isAvailable() {
-    return this.transporter !== null;
+    return this.resend !== null;
   }
 
   /**
@@ -64,17 +63,21 @@ class EmailService {
     const verificationUrl = `${process.env.EMAIL_VERIFICATION_URL || 'http://localhost:8080/verify-email'}?token=${verificationToken}`;
     const expiryHours = parseInt(process.env.VERIFICATION_TOKEN_EXPIRY_HOURS, 10) || 24;
 
-    const mailOptions = {
-      from: process.env.EMAIL_FROM || 'CleanStreak <noreply@cleanstreak.com>',
-      to: user.email,
-      subject: 'Verify Your CleanStreak Account',
-      text: this.getVerificationEmailText(verificationUrl, expiryHours)
-    };
-
     try {
-      const info = await this.transporter.sendMail(mailOptions);
-      console.log('Verification email sent:', info.messageId);
-      return { success: true, messageId: info.messageId };
+      const { data, error } = await this.resend.emails.send({
+        from: process.env.EMAIL_FROM || 'onboarding@resend.dev',
+        to: user.email,
+        subject: 'Verify Your CleanStreak Account',
+        text: this.getVerificationEmailText(verificationUrl, expiryHours)
+      });
+
+      if (error) {
+        console.error('Resend API error:', error);
+        throw new Error('Failed to send verification email');
+      }
+
+      console.log('Verification email sent:', data.id);
+      return { success: true, messageId: data.id };
     } catch (error) {
       console.error('Failed to send verification email:', error);
       throw new Error('Failed to send verification email');
