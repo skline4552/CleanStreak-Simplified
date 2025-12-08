@@ -5811,6 +5811,9 @@
                 // Sync with server to get latest data
                 await syncWithServer();
 
+                // Load dashboard to refresh task display
+                await loadDashboard();
+
                 // Start background sync for authenticated user
                 startBackgroundSync();
 
