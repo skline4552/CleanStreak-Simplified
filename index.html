@@ -4125,8 +4125,12 @@
                             // Save to localStorage
                             saveState();
 
-                            // Update display
-                            updateDisplay();
+                            // Update streak display only (don't re-fetch task which would overwrite next_task)
+                            document.getElementById('streakText').textContent = `🔥 Current streak: ${AppState.streak.current} days`;
+                            document.getElementById('doneButton').textContent = 'Completed!';
+                            document.getElementById('doneButton').classList.add('completed');
+                            document.getElementById('doneButton').disabled = true;
+                            document.getElementById('completedMessage').style.display = 'block';
                         }
                     } catch (error) {
                         console.error('Error saving to server:', error);
