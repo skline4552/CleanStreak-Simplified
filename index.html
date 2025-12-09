@@ -2685,12 +2685,16 @@
             /**
              * Complete today's task
              * @param {string} taskDescription - Task that was completed
+             * @param {string|null} taskRotationId - Task rotation ID (null for legacy tasks)
              * @returns {Promise<object>} Updated streak data
              */
-            async completeTask(taskDescription) {
+            async completeTask(taskDescription, taskRotationId = null) {
                 return apiRequest('/user/complete', {
                     method: 'POST',
-                    body: JSON.stringify({ taskName: taskDescription })
+                    body: JSON.stringify({
+                        taskName: taskDescription,
+                        task_rotation_id: taskRotationId
+                    })
                 });
             },
 
@@ -4091,7 +4095,10 @@
                 // If authenticated, save to server
                 if (AppState.user.isAuthenticated) {
                     try {
-                        const response = await UserAPI.completeTask(completionData.taskName);
+                        const response = await UserAPI.completeTask(
+                            completionData.taskName,
+                            completionData.task_rotation_id
+                        );
 
                         if (response.success) {
                             // Update streak from server response
