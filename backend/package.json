@@ -7,7 +7,7 @@
     "start": "node src/app.js",
     "start:local": "node src/app.js",
     "dev": "nodemon src/app.js",
-    "build": "prisma generate && prisma db push --skip-generate --accept-data-loss",
+    "build": "echo 'Build complete - Prisma client generated in postinstall'",
     "postinstall": "prisma generate",
     "test": "jest",
     "test:watch": "jest --watch",
