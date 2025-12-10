@@ -3209,10 +3209,24 @@
                 }
             }
 
-            // Update engagement from profile stats
-            if (serverData.profile && serverData.profile.success && serverData.profile.data) {
-                const profileStats = serverData.profile.data.stats || {};
-                AppState.engagement.totalCompletions = profileStats.totalCompletions || 0;
+            // Update profile data (including email_verified)
+            // Backend returns: { user: { id, email, email_verified, ... }, stats: { ... } }
+            if (serverData.profile && serverData.profile.user) {
+                const user = serverData.profile.user;
+                const stats = serverData.profile.stats || {};
+
+                // Update profile in AppState
+                if (!AppState.user.profile) {
+                    AppState.user.profile = {};
+                }
+                AppState.user.profile.email_verified = user.email_verified || false;
+                AppState.user.profile.email = user.email;
+                AppState.user.profile.id = user.id;
+
+                console.log('Synced email_verified from server:', user.email_verified);
+
+                // Update engagement from stats
+                AppState.engagement.totalCompletions = stats.totalCompletions || 0;
                 AppState.engagement.consecutiveDays = AppState.streak.current;
             }
 

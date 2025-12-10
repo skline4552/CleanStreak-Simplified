@@ -463,13 +463,36 @@ class UserController {
       const userId = req.user.userId;
       const email = req.user.email;
 
+      // Get user data from database to include email_verified
+      const user = await this.prisma.users.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          email: true,
+          email_verified: true,
+          created_at: true,
+          last_login: true
+        }
+      });
+
+      if (!user) {
+        return res.status(404).json({
+          error: 'User not found',
+          code: 'USER_NOT_FOUND',
+          message: 'User profile not found'
+        });
+      }
+
       // Get basic stats for the profile
       const stats = await this.streakService.getStreakStats(userId);
 
       res.status(200).json({
         user: {
-          id: userId,
-          email: email
+          id: user.id,
+          email: user.email,
+          email_verified: user.email_verified,
+          createdAt: user.created_at,
+          lastLogin: user.last_login
         },
         stats
       });
