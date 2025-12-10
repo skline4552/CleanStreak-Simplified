@@ -3194,31 +3194,19 @@
             if (!serverData) return;
 
             // Update streak data from server
-            if (serverData.streaks && serverData.streaks.success && serverData.streaks.data) {
-                const streaks = serverData.streaks.data.streaks || [];
-                const stats = serverData.streaks.data.stats || {};
+            // Backend returns: { streaks: { current_streak, longest_streak, total_completions, last_completed } }
+            if (serverData.streaks && serverData.streaks.streaks) {
+                const streaks = serverData.streaks.streaks;
 
                 // Server is the source of truth for streaks
-                AppState.streak.current = stats.totalCurrentStreak || 0;
-                AppState.streak.bestStreak = stats.bestOverallStreak || 0;
+                AppState.streak.current = streaks.current_streak || 0;
+                AppState.streak.bestStreak = streaks.longest_streak || 0;
 
-                // Find the most recent completion date from streaks
-                if (streaks.length > 0) {
-                    const mostRecent = streaks.reduce((latest, streak) => {
-                        const streakDate = new Date(streak.lastCompletedAt);
-                        const latestDate = latest ? new Date(latest) : new Date(0);
-                        return streakDate > latestDate ? streak.lastCompletedAt : latest;
-                    }, null);
-
-                    if (mostRecent) {
-                        AppState.streak.lastCompletedDate = new Date(mostRecent).toDateString();
-                    }
+                // Set the last completion date if available
+                if (streaks.last_completed) {
+                    AppState.streak.lastCompletedDate = new Date(streaks.last_completed).toDateString();
+                    console.log('Synced lastCompletedDate from server:', AppState.streak.lastCompletedDate);
                 }
-
-                // Build history from streaks (dates when tasks were completed)
-                AppState.streak.history = streaks.map(streak =>
-                    new Date(streak.lastCompletedAt).toDateString()
-                );
             }
 
             // Update engagement from profile stats

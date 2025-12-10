@@ -52,11 +52,13 @@ class UserController {
       const streaks = primaryStreak ? {
         current_streak: primaryStreak.currentStreak,
         longest_streak: primaryStreak.bestStreak,
-        total_completions: stats.totalCompletions
+        total_completions: stats.totalCompletions,
+        last_completed: primaryStreak.lastCompleted
       } : {
         current_streak: 0,
         longest_streak: 0,
-        total_completions: 0
+        total_completions: 0,
+        last_completed: null
       };
 
       res.status(200).json({ streaks });
