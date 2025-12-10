@@ -4378,6 +4378,15 @@
                 if (AppState.user.profile) {
                     AppState.user.profile.email_verified = true;
                     saveState();
+
+                    // Refresh profile from server to ensure banner stays hidden
+                    try {
+                        const profileData = await UserAPI.getProfile();
+                        AppState.user.profile.email_verified = profileData.user?.email_verified || profileData.email_verified || true;
+                        saveState();
+                    } catch (error) {
+                        console.log('Could not refresh profile, but verification succeeded');
+                    }
                 }
 
                 // Hide banner if visible
