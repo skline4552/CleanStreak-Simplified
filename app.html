@@ -2471,7 +2471,7 @@
         // UPDATE THIS: Replace the second URL with your actual Railway Backend URL
         const API_BASE_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
             ? 'http://localhost:3000/api'
-            : 'api.stenotes.com'; 
+            : 'https://api.stenotes.com'; 
         
         const API_TIMEOUT = 10000; // 10 seconds
 
@@ -6254,7 +6254,7 @@
         updateDisplay();
 
         // Handle URL actions from index.html
-        window.addEventListener('DOMContentLoaded', () => {
+        function handleUrlActions() {
             const urlParams = new URLSearchParams(window.location.search);
             const action = urlParams.get('action');
             if (action === 'login') {
@@ -6262,7 +6262,13 @@
             } else if (action === 'register') {
                 showAuthModal('register');
             }
-        });
+        }
+
+        if (document.readyState === 'loading') {
+            window.addEventListener('DOMContentLoaded', handleUrlActions);
+        } else {
+            handleUrlActions();
+        }
     </script>
 </body>
 </html>
