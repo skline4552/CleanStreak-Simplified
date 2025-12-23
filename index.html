@@ -1856,6 +1856,58 @@
                 font-size: 0.9rem;
             }
         }
+        /* Celebration Modal Styles */
+        .celebration-modal {
+            text-align: center;
+            max-width: 500px;
+        }
+
+        .celebration-header {
+            margin-bottom: 30px;
+        }
+
+        .confetti {
+            font-size: 4rem;
+            margin-bottom: 10px;
+            animation: bounce 1s ease infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .setup-summary {
+            display: flex;
+            justify-content: space-around;
+            margin: 30px 0;
+            gap: 20px;
+        }
+
+        .summary-stat {
+            flex: 1;
+            padding: 20px;
+            background: #f8f9ff;
+            border-radius: 12px;
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+
+        .celebration-message {
+            margin: 20px 0;
+            line-height: 1.6;
+            color: #495057;
+        }
     </style>
 </head>
 <body>
@@ -2114,6 +2166,40 @@
                 </button>
                 <button id="skipKeystonesOnboarding" class="btn-secondary">Skip for Now</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Setup Complete Milestone Modal -->
+    <div id="setupCompleteOverlay" class="modal-overlay" style="display: none;">
+        <div class="modal-content celebration-modal">
+            <div class="celebration-header">
+                <div class="confetti">🎉</div>
+                <h2>Your Home is Ready!</h2>
+            </div>
+
+            <div class="setup-summary">
+                <div class="summary-stat">
+                    <div class="stat-number" id="roomCount">0</div>
+                    <div class="stat-label">Rooms Configured</div>
+                </div>
+                <div class="summary-stat">
+                    <div class="stat-number" id="keystoneCount">0</div>
+                    <div class="stat-label">Keystone Tasks Active</div>
+                </div>
+                <div class="summary-stat">
+                    <div class="stat-number" id="totalTaskCount">0</div>
+                    <div class="stat-label">Tasks in Rotation</div>
+                </div>
+            </div>
+
+            <p class="celebration-message">
+                Your personalized cleaning rotation is ready! Each task takes just 5-10 minutes.
+                Consistency is key—small daily efforts add up to a cleaner home without the overwhelm.
+            </p>
+
+            <button id="startCleaningBtn" class="done-button" style="max-width: 300px; margin: 0 auto; display: block;">
+                See My First Task
+            </button>
         </div>
     </div>
 
@@ -4954,11 +5040,20 @@
                 // Close modal
                 closeKeystoneOnboardingModal();
 
-                // Show success message and refresh
+                // Show success message
                 showNotification('Keystone tasks configured successfully!', 'success');
 
-                // Trigger rotation generation if user has rooms configured
-                await loadDashboard();
+                // Check if this is first-time setup (not reconfiguration)
+                const isFirstSetup = !localStorage.getItem('setup_milestone_shown');
+
+                if (isFirstSetup) {
+                    // Show celebration milestone
+                    await showSetupCompleteMilestone();
+                    localStorage.setItem('setup_milestone_shown', 'true');
+                } else {
+                    // Existing user reconfiguring - just reload dashboard
+                    await loadDashboard();
+                }
 
             } catch (error) {
                 console.error('Failed to initialize keystones:', error);
@@ -4967,6 +5062,46 @@
                 saveButton.innerHTML = originalText;
             } finally {
                 KeystoneOnboardingState.isInitializing = false;
+            }
+        }
+
+        /**
+         * Show the Setup Complete celebration milestone
+         */
+        async function showSetupCompleteMilestone() {
+            try {
+                // Fetch data for summary
+                const roomsResponse = await RoomAPI.getUserRooms();
+                const keystonesResponse = await KeystoneAPI.getUserKeystones();
+                
+                // Fetch current task to get total rotation count
+                const taskResponse = await TaskAPI.getCurrentTask();
+
+                // Populate stats
+                document.getElementById('roomCount').textContent = roomsResponse.rooms?.length || 0;
+                
+                // Filter active keystones
+                const activeKeystones = (keystonesResponse.keystone_tasks || []).filter(k => k.is_active !== false);
+                document.getElementById('keystoneCount').textContent = activeKeystones.length;
+                
+                // Get total tasks count
+                document.getElementById('totalTaskCount').textContent = taskResponse.task?.total_tasks || 0;
+
+                // Show modal
+                document.getElementById('setupCompleteOverlay').style.display = 'flex';
+
+                // Wait for user to click "Start Cleaning"
+                return new Promise((resolve) => {
+                    document.getElementById('startCleaningBtn').onclick = async () => {
+                        document.getElementById('setupCompleteOverlay').style.display = 'none';
+                        await loadDashboard();
+                        resolve();
+                    };
+                });
+            } catch (error) {
+                console.error('Failed to show setup milestone:', error);
+                // Fallback: just load dashboard
+                await loadDashboard();
             }
         }
 
