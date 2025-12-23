@@ -2979,6 +2979,17 @@
          */
         function loadState() {
             try {
+                // Check if we should redirect to landing page
+                // Only redirect if NOT authenticated AND NOT coming from welcome.html with an action
+                const authStateStr = localStorage.getItem('cleanStreak_authenticated_state');
+                const urlParams = new URLSearchParams(window.location.search);
+                const action = urlParams.get('action');
+
+                if (!authStateStr && !action) {
+                    window.location.href = 'welcome.html';
+                    return;
+                }
+
                 // Try authenticated state first
                 const authenticatedData = localStorage.getItem('cleanStreak_authenticated_state');
                 if (authenticatedData) {
@@ -6089,6 +6100,17 @@
 
         // Initial display update
         updateDisplay();
+
+        // Handle URL actions from welcome.html
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const action = urlParams.get('action');
+            if (action === 'login') {
+                showAuthModal('login');
+            } else if (action === 'register') {
+                showAuthModal('register');
+            }
+        });
     </script>
 </body>
 </html>
