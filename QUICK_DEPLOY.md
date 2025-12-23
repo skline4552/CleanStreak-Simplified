@@ -46,14 +46,14 @@ CORS_CREDENTIALS=true
 
 ### 3. Deploy Frontend (5 minutes)
 
-**Option A: Update index.html for production**
+**Option A: Update app.html for production**
 
-Edit `index.html` line 2124:
+Edit `app.html` line 2124:
 ```javascript
 const API_BASE_URL = 'https://your-backend-url.railway.app/api';
 ```
 
-Then deploy index.html to:
+Then deploy `app.html` and `index.html` to:
 - **Vercel**: `npx vercel --prod index.html`
 - **Netlify**: Drag and drop `index.html` to https://app.netlify.com/drop
 - **GitHub Pages**: Push to `gh-pages` branch
@@ -61,19 +61,12 @@ Then deploy index.html to:
 **Option B: Use Railway for frontend too**
 
 1. In Railway, click "New" → "Empty Service"
-2. Create `frontend-package.json` in project root:
-```json
-{
-  "name": "cleanstreak-frontend",
-  "scripts": {
-    "start": "npx serve index.html -p 8000"
-  }
-}
-```
-3. Settings:
-   - Build Command: `npm install`
+2. Settings:
+   - Root Directory: Leave empty (uses root)
+   - The project already includes `package.json` and `start-frontend.sh`.
+   - Build Command: (leave empty)
    - Start Command: `npm start`
-4. Generate Domain
+3. Generate Domain
 
 ### 4. Update CORS (2 minutes)
 
@@ -96,7 +89,7 @@ Done! Your app is live 🎉
 
 ## Important Files to Update
 
-### index.html (Line 2124)
+### app.html (Line 2124)
 ```javascript
 // BEFORE (development)
 const API_BASE_URL = 'http://localhost:3000/api';
