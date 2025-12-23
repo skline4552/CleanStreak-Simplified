@@ -271,7 +271,7 @@ function generateCookieOptions(options = {}) {
     ...options,
     httpOnly: true, // Always enforce httpOnly for security
     secure: isProduction, // Always use secure in production (required for sameSite: 'none')
-    sameSite: isProduction ? 'none' : 'lax' // Use 'none' for cross-domain in production, 'lax' for development
+    sameSite: isProduction ? 'none' : 'strict' // Use 'none' for cross-domain in production, 'strict' for development
   };
 }
 
@@ -378,7 +378,7 @@ function validateTokenPayload(payload) {
   // Required fields for access tokens (including tokenVersion for security)
   const requiredFields = ['userId', 'tokenVersion'];
   return requiredFields.every(field => payload.hasOwnProperty(field)) &&
-         typeof payload.tokenVersion === 'number';
+    typeof payload.tokenVersion === 'number';
 }
 
 /**

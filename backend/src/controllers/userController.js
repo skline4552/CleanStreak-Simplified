@@ -3,6 +3,7 @@ const AccountService = require('../services/accountService');
 const TaskProgressService = require('../services/taskProgressService');
 const { validateTaskName, sanitizeString, validateEmail } = require('../utils/validation');
 const { hashPassword, comparePassword, validatePasswordStrength } = require('../utils/password');
+const { prisma } = require('../config/prisma');
 
 /**
  * User Controller
@@ -16,6 +17,7 @@ class UserController {
     this.streakService = new StreakService();
     this.accountService = new AccountService();
     this.taskProgressService = new TaskProgressService();
+    this.prisma = prisma;
 
     // Bind methods to preserve 'this' context
     this.getStreaks = this.getStreaks.bind(this);
@@ -873,13 +875,13 @@ class UserController {
       res.clearCookie('accessToken', {
         httpOnly: true,
         secure: isProduction,
-        sameSite: isProduction ? 'none' : 'lax'
+        sameSite: isProduction ? 'none' : 'strict'
       });
 
       res.clearCookie('refreshToken', {
         httpOnly: true,
         secure: isProduction,
-        sameSite: isProduction ? 'none' : 'lax'
+        sameSite: isProduction ? 'none' : 'strict'
       });
 
       res.status(200).json({
