@@ -87,6 +87,7 @@ function validatePasswordStrength(password) {
 
   if (password.length > MAX_PASSWORD_LENGTH) {
     errors.push(`Password must be no more than ${MAX_PASSWORD_LENGTH} characters long`);
+    return { isValid: false, errors };
   }
 
   // Character requirements

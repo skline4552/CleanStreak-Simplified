@@ -296,6 +296,7 @@ function sanitizeString(input) {
   }
 
   return input
+    .substring(0, 1000) // Limit length first to prevent DoS
     .trim()
     // Remove dangerous protocols and functions
     .replace(/javascript:/gi, '')
@@ -316,7 +317,6 @@ function sanitizeString(input) {
       };
       return htmlEntities[match];
     })
-    .substring(0, 1000); // Limit length to prevent memory issues
 }
 
 /**

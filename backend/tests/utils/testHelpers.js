@@ -99,7 +99,8 @@ async function createAuthenticatedUser(userData = {}) {
 
   const tokens = generateTokenPair({
     userId: user.id,
-    email: user.email
+    email: user.email,
+    tokenVersion: user.token_version
   });
 
   // Create session in database
