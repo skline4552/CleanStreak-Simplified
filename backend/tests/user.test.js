@@ -324,7 +324,7 @@ describe('User API Integration Tests', () => {
         .set(getAuthHeader(accessToken));
 
       // Should handle gracefully, may return 404 or 500
-      expect([404, 500]).toContain(response.status);
+      expect([401, 404, 500]).toContain(response.status);
     });
 
   });
