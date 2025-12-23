@@ -653,7 +653,8 @@ describe('Authentication System Tests', () => {
     test('should generate valid token pair', () => {
       const payload = {
         userId: 'test-user-id',
-        email: 'test@example.com'
+        email: 'test@example.com',
+        tokenVersion: 1
       };
 
       const tokens = generateTokenPair(payload);
@@ -672,7 +673,8 @@ describe('Authentication System Tests', () => {
     test('should verify and decode access token', () => {
       const payload = {
         userId: 'test-user-id',
-        email: 'test@example.com'
+        email: 'test@example.com',
+        tokenVersion: 1
       };
 
       const tokens = generateTokenPair(payload);
@@ -688,7 +690,8 @@ describe('Authentication System Tests', () => {
     test('should verify and decode refresh token', () => {
       const payload = {
         userId: 'test-user-id',
-        email: 'test@example.com'
+        email: 'test@example.com',
+        tokenVersion: 1
       };
 
       const tokens = generateTokenPair(payload);
