@@ -233,6 +233,9 @@
 
     <header>
         <div class="container">
+            <div id="previewControls" style="display: none; margin-bottom: 20px;">
+                <a href="index.html" class="btn btn-primary" style="background-color: rgba(255,255,255,0.2); color: white; border: 1px solid white;">← Back to App</a>
+            </div>
             <h1>End Weekend Cleaning Marathons</h1>
             <p class="hero-subtitle">The sustainable system for people who feel overwhelmed by cleaning. One small task a day, an effortlessly clean home forever.</p>
             <a href="index.html?action=register" class="btn btn-primary">Start Building Your Home</a>
@@ -353,10 +356,28 @@
     </footer>
 
     <script>
-        // If user is already logged in, redirect to the app
+        // Check for preview mode
+        const urlParams = new URLSearchParams(window.location.search);
+        const isPreview = urlParams.get('preview') === 'true';
+
+        if (isPreview) {
+            document.getElementById('previewControls').style.display = 'block';
+            // Hide CTA links in preview mode to avoid confusion
+            const ctas = document.querySelectorAll('a[href*="index.html?action="]');
+            ctas.forEach(cta => {
+                cta.style.display = 'none';
+            });
+            // Show a simpler footer CTA
+            const footerCta = document.querySelector('.footer-cta');
+            if (footerCta) {
+                footerCta.innerHTML = '<h2 style="color: white; margin-bottom: 20px;">Ready to go back?</h2><a href="index.html" class="btn btn-primary">Return to App</a>';
+            }
+        }
+
+        // If user is already logged in, redirect to the app (unless in preview mode)
         // We check for the 'cleanStreak_authenticated_state' in localStorage
         const authState = localStorage.getItem('cleanStreak_authenticated_state');
-        if (authState) {
+        if (authState && !isPreview) {
             try {
                 const data = JSON.parse(authState);
                 if (data.user && data.user.isAuthenticated) {

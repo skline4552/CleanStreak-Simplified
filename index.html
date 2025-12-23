@@ -2259,6 +2259,14 @@
                         <button class="btn-secondary" id="changePasswordBtn">Change Password</button>
                         <button class="btn-danger" id="deleteAccountBtn">Delete Account</button>
                     </div>
+
+                    <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #f1f3f5;">
+                        <h3>About CleanStreak</h3>
+                        <p class="tab-description">Learn more about the philosophy and methodology behind your cleaning routine.</p>
+                        <button class="btn-secondary" onclick="window.open('welcome.html?preview=true', '_blank')">
+                            How CleanStreak Works
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -2988,6 +2996,11 @@
                 if (!authStateStr && !action) {
                     window.location.href = 'welcome.html';
                     return;
+                }
+
+                // Check for new user parameter to clear it
+                if (urlParams.get('newUser') === 'true') {
+                    window.history.replaceState({}, '', 'index.html');
                 }
 
                 // Try authenticated state first
