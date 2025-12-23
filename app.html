@@ -3083,9 +3083,16 @@
                 const urlParams = new URLSearchParams(window.location.search);
                 const action = urlParams.get('action');
 
+                console.log('loadState Check:', { 
+                    authenticated: !!authStateStr, 
+                    action: action, 
+                    url: window.location.href 
+                });
+
                 if (!authStateStr && !action) {
-                    window.location.href = 'index.html';
-                    return;
+                    console.warn('Redirecting to index.html prevented for debugging');
+                    // window.location.href = 'index.html';
+                    // return;
                 }
 
                 // Check for new user parameter to clear it
