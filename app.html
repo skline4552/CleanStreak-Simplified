@@ -2599,6 +2599,11 @@
                     // Extract error message from various response formats
                     let errorMessage = data.message || data.error || `HTTP ${response.status}`;
 
+                    // Handle case where message is an object
+                    if (typeof errorMessage === 'object') {
+                        errorMessage = JSON.stringify(errorMessage);
+                    }
+
                     // If there are validation details, format them into a readable message
                     if (data.details && Array.isArray(data.details) && data.details.length > 0) {
                         // Join all validation errors with line breaks
@@ -3083,17 +3088,13 @@
                 const urlParams = new URLSearchParams(window.location.search);
                 const action = urlParams.get('action');
 
-                console.log('loadState Check:', { 
-                    authenticated: !!authStateStr, 
-                    action: action, 
-                    url: window.location.href 
-                });
-
+                // Redirect logic disabled to prevent loops - app handles anonymous state gracefully
+                /* 
                 if (!authStateStr && !action) {
-                    console.warn('Redirecting to index.html prevented for debugging');
-                    // window.location.href = 'index.html';
-                    // return;
+                    window.location.href = 'index.html';
+                    return;
                 }
+                */
 
                 // Check for new user parameter to clear it
                 if (urlParams.get('newUser') === 'true') {
