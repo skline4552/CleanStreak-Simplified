@@ -151,17 +151,9 @@ Railway is the easiest option with great PostgreSQL support and free credits for
 6. **Deploy Frontend**
    - Add another service: "New" → "Empty Service"
    - Go to Settings → Root Directory: Leave empty (uses root)
-   - Install a simple static server:
-     - Create `package.json` in root:
-       ```json
-       {
-         "name": "cleanstreak-frontend",
-         "scripts": {
-           "start": "npx serve index.html -l 8000"
-         }
-       }
-       ```
-   - Start Command: `npm start`
+   - The project already includes a `package.json` and `start-frontend.sh` for the frontend.
+   - Build Command: (leave empty)
+   - Start Command: `npm start` (or `sh start-frontend.sh`)
 
 7. **Generate Domain**
    - Click "Generate Domain" for both services
@@ -371,7 +363,7 @@ npx prisma migrate deploy
 
 ### 3. Update Frontend API URL
 
-If backend and frontend are on different domains, update the API base URL in `index.html`:
+If backend and frontend are on different domains, update the API base URL in `app.html`:
 
 ```javascript
 // Find the API configuration section (around line 50-100)
