@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CleanStreak | Sustainable Daily Cleaning</title>
+    <style>
+        :root {
+            --primary: #667eea;
+            --primary-dark: #764ba2;
+            --secondary: #6c757d;
+            --success: #28a745;
+            --background: #f8f9fa;
+            --text-dark: #333;
+            --text-light: #6c757d;
+            --white: #ffffff;
+            --shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: var(--text-dark);
+            background-color: var(--background);
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Hero Section */
+        header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: var(--white);
+            padding: 80px 0 60px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            font-weight: 800;
+        }
+
+        .hero-subtitle {
+            font-size: 1.25rem;
+            margin-bottom: 40px;
+            opacity: 0.9;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 16px 32px;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-primary {
+            background-color: var(--white);
+            color: var(--primary-dark);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .login-link {
+            display: block;
+            margin-top: 20px;
+            color: var(--white);
+            text-decoration: underline;
+            font-weight: 500;
+            opacity: 0.8;
+        }
+
+        /* Section Styles */
+        section {
+            padding: 80px 0;
+        }
+
+        h2 {
+            font-size: 2.25rem;
+            text-align: center;
+            margin-bottom: 50px;
+            color: var(--primary-dark);
+        }
+
+        /* Philosophy Section */
+        .philosophy-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .pillar-card {
+            background: var(--white);
+            padding: 40px 30px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: var(--shadow);
+            transition: transform 0.3s ease;
+        }
+
+        .pillar-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .pillar-icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .pillar-card h3 {
+            margin-bottom: 15px;
+            color: var(--primary);
+        }
+
+        .methodology-box {
+            background-color: #eef2ff;
+            padding: 30px;
+            border-radius: 20px;
+            margin-top: 40px;
+            border-left: 5px solid var(--primary);
+        }
+
+        /* How It Works */
+        .benefits-list {
+            list-style: none;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .benefit-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            margin-bottom: 20px;
+            font-size: 1.1rem;
+        }
+
+        .check-icon {
+            color: var(--success);
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        /* Starter Kit */
+        .kit-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .kit-item {
+            background: var(--white);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            border: 2px solid #eee;
+        }
+
+        .kit-item span {
+            display: block;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+
+        /* FAQ Section */
+        .faq-list {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .faq-item {
+            margin-bottom: 30px;
+            background: var(--white);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .faq-question {
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            color: var(--primary-dark);
+            display: block;
+        }
+
+        .faq-answer {
+            color: var(--text-light);
+        }
+
+        footer {
+            text-align: center;
+            padding: 60px 0;
+            background-color: #333;
+            color: var(--white);
+        }
+
+        .footer-cta {
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 600px) {
+            h1 { font-size: 2rem; }
+            section { padding: 40px 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <h1>End Weekend Cleaning Marathons</h1>
+            <p class="hero-subtitle">The sustainable system for people who feel overwhelmed by cleaning. One small task a day, an effortlessly clean home forever.</p>
+            <a href="index.html?action=register" class="btn btn-primary">Start Building Your Home</a>
+            <a href="index.html?action=login" class="login-link">Already have an account? Sign In</a>
+        </div>
+    </header>
+
+    <section id="philosophy">
+        <div class="container">
+            <h2>The Three Pillars Philosophy</h2>
+            <p style="text-align: center; max-width: 800px; margin: -30px auto 50px; font-size: 1.1rem; color: var(--text-light);">
+                Stop trying to clean everything at once. Our system rotates your home room-by-room, focusing on three core pillars that make the biggest impact.
+            </p>
+            
+            <div class="philosophy-grid">
+                <div class="pillar-card">
+                    <span class="pillar-icon">🪟</span>
+                    <h3>Glass Clear</h3>
+                    <p>Windows, mirrors, and glass surfaces. When the glass shines, the whole room feels brighter.</p>
+                </div>
+                <div class="pillar-card">
+                    <span class="pillar-icon">✨</span>
+                    <h3>Surfaces Wiped</h3>
+                    <p>Countertops, tables, and shelves. Clearing the clutter and wiping the dust off horizontal surfaces.</p>
+                </div>
+                <div class="pillar-card">
+                    <span class="pillar-icon">🧹</span>
+                    <h3>Floor Finished</h3>
+                    <p>Vacuumed or swept. The final touch that anchors the room's cleanliness.</p>
+                </div>
+            </div>
+
+            <div class="methodology-box">
+                <strong>The Top-to-Bottom Approach:</strong>
+                <p>We clean systematically from Glass → Surfaces → Floor in every room. This ensures nothing is missed and dust doesn't settle on areas you've already cleaned.</p>
+                <p style="margin-top: 15px;"><strong>Keystone Tasks:</strong> We rotate high-traffic hygiene spots (toilets, sinks, stovetops) every 3-5 days to keep your home sanitary between full rotations.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="how-it-works" style="background-color: var(--white);">
+        <div class="container">
+            <h2>How It Works</h2>
+            <div class="benefits-list">
+                <div class="benefit-item">
+                    <span class="check-icon">✓</span>
+                    <span><strong>One task per day:</strong> 5-10 minutes is all it takes to maintain the habit.</span>
+                </div>
+                <div class="benefit-item">
+                    <span class="check-icon">✓</span>
+                    <span><strong>No decision fatigue:</strong> The app decides "what to clean" so you don't have to.</span>
+                </div>
+                <div class="benefit-item">
+                    <span class="check-icon">✓</span>
+                    <span><strong>Intelligent rotation:</strong> Every corner of your home gets attention at the perfect frequency.</span>
+                </div>
+                <div class="benefit-item">
+                    <span class="check-icon">✓</span>
+                    <span><span><strong>Streak & Progress:</strong> Stay motivated with streak tracking and satisfying completion milestones.</span></span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="starter-kit">
+        <div class="container">
+            <h2>Gather Your Toolkit</h2>
+            <p style="text-align: center; margin-bottom: 40px; color: var(--text-light);">You likely have most of these already. Setting up your kit ensures you're ready when the app gives you your first task.</p>
+            <div class="kit-grid">
+                <div class="kit-item">🧼 <span>Glass Cleaner</span></div>
+                <div class="kit-item">🧼 <span>Surface Cleaner</span></div>
+                <div class="kit-item">🧻 <span>Microfiber Cloths</span></div>
+                <div class="kit-item">🚽 <span>Bathroom Cleaner</span></div>
+                <div class="kit-item">🧹 <span>Vacuum / Broom</span></div>
+                <div class="kit-item">🪣 <span>Mop / Swiffer</span></div>
+                <div class="kit-item">🪥 <span>Scrub Brush</span></div>
+                <div class="kit-item">☁️ <span>Duster</span></div>
+            </div>
+        </div>
+    </section>
+
+    <section id="faq" style="background-color: var(--white);">
+        <div class="container">
+            <h2>Frequently Asked Questions</h2>
+            <div class="faq-list">
+                <div class="faq-item">
+                    <span class="faq-question">Who is this app for?</span>
+                    <p class="faq-answer">For people who value a clean home but feel overwhelmed. If you've been stuck in a cycle of weekend cleaning marathons followed by weeks of guilt, this system is for you.</p>
+                </div>
+                <div class="faq-item">
+                    <span class="faq-question">How long does each task take?</span>
+                    <p class="faq-answer">Most daily tasks take 5-10 minutes. The goal is to make cleaning so quick that you actually do it consistently.</p>
+                </div>
+                <div class="faq-item">
+                    <span class="faq-question">What if I miss a day?</span>
+                    <p class="faq-answer">Life happens. The app won't punish you - it simply picks up where you left off. The system is designed to be forgiving while still encouraging consistency.</p>
+                </div>
+                <div class="faq-item">
+                    <span class="faq-question">Can I skip or swap a task?</span>
+                    <p class="faq-answer">Yes. If today's task doesn't work for you, you can skip it and it will cycle back around eventually.</p>
+                </div>
+                <div class="faq-item">
+                    <span class="faq-question">How often will each room be cleaned?</span>
+                    <p class="faq-answer">It depends on how many rooms you have, but the system ensures every room cycles through all three pillars regularly.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <div class="footer-cta">
+                <h2 style="color: white; margin-bottom: 20px;">Ready to start?</h2>
+                <a href="index.html?action=register" class="btn btn-primary">Create Your Account</a>
+            </div>
+            <p>&copy; 2025 CleanStreak. Built for peace of mind.</p>
+        </div>
+    </footer>
+
+    <script>
+        // If user is already logged in, redirect to the app
+        // We check for the 'cleanStreak_authenticated_state' in localStorage
+        const authState = localStorage.getItem('cleanStreak_authenticated_state');
+        if (authState) {
+            try {
+                const data = JSON.parse(authState);
+                if (data.user && data.user.isAuthenticated) {
+                    window.location.href = 'index.html';
+                }
+            } catch (e) {
+                console.error('Error checking auth state');
+            }
+        }
+    </script>
+</body>
+</html>
