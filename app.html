@@ -3088,17 +3088,9 @@
                 const urlParams = new URLSearchParams(window.location.search);
                 const action = urlParams.get('action');
 
-                // Redirect logic disabled to prevent loops - app handles anonymous state gracefully
-                /* 
-                if (!authStateStr && !action) {
-                    window.location.href = 'index.html';
-                    return;
-                }
-                */
-
                 // Check for new user parameter to clear it
                 if (urlParams.get('newUser') === 'true') {
-                    window.history.replaceState({}, '', 'index.html');
+                    window.history.replaceState({}, '', 'app.html');
                 }
 
                 // Try authenticated state first
