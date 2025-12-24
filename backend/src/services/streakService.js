@@ -1,6 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
 const { validateTaskName, sanitizeString } = require('../utils/validation');
-const { createId } = require('@paralleldrive/cuid2');
 
 /**
  * Streak Service
@@ -116,7 +115,7 @@ class StreakService {
         where: {
           user_id: userId,
           task_name: sanitizedTaskName,
-          completed_date: {
+          completed_at: {
             gte: completionDay,
             lt: new Date(completionDay.getTime() + 24 * 60 * 60 * 1000)
           }
@@ -181,7 +180,6 @@ class StreakService {
             updated_at: new Date()
           },
           create: {
-            id: createId(),
             user_id: userId,
             task_name: sanitizedTaskName,
             current_streak: newStreak,
@@ -195,11 +193,9 @@ class StreakService {
         // Create completion history entry
         const completion = await tx.completion_history.create({
           data: {
-            id: createId(),
             user_id: userId,
             task_name: sanitizedTaskName,
-            completed_date: completionDate,
-            streak_day: newStreak,
+            completed_at: completionDate,
             notes: sanitizedNotes,
             created_at: new Date()
           }

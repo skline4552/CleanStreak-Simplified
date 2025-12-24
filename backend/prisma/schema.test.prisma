@@ -9,7 +9,7 @@ datasource db {
 }
 
 model analytics {
-  id           String   @id
+  id           String   @id @default(cuid())
   metric_name  String
   metric_value String
   date         DateTime @default(now())
@@ -20,7 +20,7 @@ model analytics {
 }
 
 model completion_history {
-  id              String   @id
+  id              String   @id @default(cuid())
   user_id         String
   task_name       String
   completed_date  DateTime @default(now())
@@ -41,7 +41,7 @@ model completion_history {
 }
 
 model user_sessions {
-  id            String   @id
+  id            String   @id @default(cuid())
   user_id       String
   refresh_token String   @unique
   device_info   String?
@@ -59,7 +59,7 @@ model user_sessions {
 }
 
 model email_verification_tokens {
-  id         String   @id
+  id         String   @id @default(cuid())
   user_id    String
   token      String   @unique
   expires_at DateTime
@@ -72,7 +72,7 @@ model email_verification_tokens {
 }
 
 model user_streaks {
-  id             String    @id
+  id             String    @id @default(cuid())
   user_id        String
   task_name      String
   current_streak Int       @default(0)
@@ -89,7 +89,7 @@ model user_streaks {
 }
 
 model users {
-  id                        String                        @id
+  id                        String                        @id @default(cuid())
   email                     String                        @unique
   password_hash             String
   created_at                DateTime                      @default(now())
@@ -114,7 +114,7 @@ model users {
 }
 
 model user_rooms {
-  id          String   @id
+  id          String   @id @default(cuid())
   user_id     String
   room_type   String
   custom_name String
@@ -131,7 +131,7 @@ model user_rooms {
 }
 
 model user_keystone_tasks {
-  id          String   @id
+  id          String   @id @default(cuid())
   user_id     String
   task_type   String
   custom_name String?
@@ -146,7 +146,7 @@ model user_keystone_tasks {
 }
 
 model task_rotation {
-  id               String   @id
+  id               String   @id @default(cuid())
   user_id          String
   task_type        String
   task_description String
@@ -163,7 +163,7 @@ model task_rotation {
 }
 
 model user_task_progress {
-  id                         String   @id
+  id                         String   @id @default(cuid())
   user_id                    String   @unique
   current_task_index         Int      @default(1)
   current_rotation_version   Int      @default(1)
@@ -177,7 +177,7 @@ model user_task_progress {
 }
 
 model pending_room_configs {
-  id          String   @id
+  id          String   @id @default(cuid())
   user_id     String   @unique
   config_data String
   created_at  DateTime @default(now())

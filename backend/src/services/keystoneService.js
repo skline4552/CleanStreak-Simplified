@@ -1,5 +1,4 @@
 const { PrismaClient } = require('@prisma/client');
-const { createId } = require('@paralleldrive/cuid2');
 
 /**
  * Keystone Service
@@ -48,7 +47,6 @@ class KeystoneService {
 
     // Create all default keystones with selective activation
     const keystones = this.defaultKeystones.map((taskType, index) => ({
-      id: createId(),
       user_id: userId,
       task_type: taskType,
       custom_name: null,
@@ -88,7 +86,6 @@ class KeystoneService {
 
     // Create keystones from provided data
     const keystones = keystoneData.map((keystone, index) => ({
-      id: createId(),
       user_id: userId,
       task_type: keystone.task_type,
       custom_name: keystone.custom_name || null,
@@ -306,7 +303,6 @@ class KeystoneService {
 
     // Create keystones from provided data
     const keystones = keystoneData.map((keystone, index) => ({
-      id: createId(),
       user_id: userId,
       task_type: keystone.task_type,
       custom_name: keystone.custom_name || null,

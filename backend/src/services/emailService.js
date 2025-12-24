@@ -1,6 +1,6 @@
 const { Resend } = require('resend');
-const { createId } = require('@paralleldrive/cuid2');
 const { prisma } = require('../config/prisma');
+const crypto = require('crypto'); // Added crypto for token generation
 
 /**
  * Email Service
@@ -60,7 +60,7 @@ class EmailService {
       throw new Error('Email service not configured');
     }
 
-    const verificationUrl = `${process.env.EMAIL_VERIFICATION_URL || 'http://localhost:8080/verify-email'}?token=${verificationToken}`;
+    const verificationUrl = `${process.env.EMAIL_VERIFICATION_URL || 'http://localhost:8080/verify-email'}?token = ${verificationToken} `;
     const expiryHours = parseInt(process.env.VERIFICATION_TOKEN_EXPIRY_HOURS, 10) || 24;
 
     try {
@@ -78,7 +78,7 @@ class EmailService {
           message: error.message,
           statusCode: error.statusCode
         });
-        throw new Error(`Failed to send verification email: ${error.message || 'Unknown error'}`);
+        throw new Error(`Failed to send verification email: ${error.message || 'Unknown error'} `);
       }
 
       console.log('Verification email sent:', data.id);
@@ -109,10 +109,10 @@ This link will expire in ${expiryHours} hours.
 If you didn't create an account with CleanStreak, you can safely ignore this email.
 
 Best regards,
-The CleanStreak Team
+  The CleanStreak Team
 
 ---
-CleanStreak - Build better habits, one task at a time
+  CleanStreak - Build better habits, one task at a time
     `.trim();
   }
 
@@ -123,8 +123,8 @@ CleanStreak - Build better habits, one task at a time
    */
   async generateVerificationToken(userId) {
     try {
-      // Create unique token
-      const token = createId();
+      // Create unique token using crypto
+      const token = crypto.randomBytes(32).toString('hex');
       const expiryHours = parseInt(process.env.VERIFICATION_TOKEN_EXPIRY_HOURS, 10) || 24;
       const expiresAt = new Date(Date.now() + expiryHours * 60 * 60 * 1000);
 
@@ -136,7 +136,11 @@ CleanStreak - Build better habits, one task at a time
       // Create new token
       await prisma.email_verification_tokens.create({
         data: {
-          id: createId(),
+          // Using crypto for the token itself, but still need an ID for the DB record
+          // For simplicity, we can use the token itself as the ID if it's guaranteed unique,
+          // or generate a separate ID if the schema requires it.
+          // Assuming 'id' in the schema is a unique identifier for the record, not the token value.
+          id: crypto.randomBytes(16).toString('hex'), // Generate a unique ID for the record
           user_id: userId,
           token,
           expires_at: expiresAt
