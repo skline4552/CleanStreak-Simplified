@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -210,6 +211,7 @@
                 opacity: 0;
                 transform: translateY(-10px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -316,9 +318,17 @@
         }
 
         @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+
+            100% {
+                transform: scale(1);
+            }
         }
 
         @media (max-width: 480px) {
@@ -371,8 +381,13 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
         }
 
         #authModal {
@@ -390,6 +405,7 @@
                 opacity: 0;
                 transform: translateY(30px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -941,6 +957,7 @@
                 opacity: 0;
                 transform: translateX(100px);
             }
+
             to {
                 opacity: 1;
                 transform: translateX(0);
@@ -968,6 +985,7 @@
                 opacity: 0;
                 transform: translateY(50px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -1036,6 +1054,7 @@
         }
 
         @media (max-width: 480px) {
+
             .offline-indicator,
             .notification-toast,
             .sync-queue-indicator {
@@ -1279,11 +1298,11 @@
             border-radius: 50%;
         }
 
-        input:checked + .slider {
+        input:checked+.slider {
             background-color: #667eea;
         }
 
-        input:checked + .slider:before {
+        input:checked+.slider:before {
             transform: translateX(22px);
         }
 
@@ -1640,6 +1659,7 @@
                 gap: 10px;
             }
         }
+
         /* Email Verification Banner Styles */
         .verification-banner {
             position: fixed;
@@ -1822,8 +1842,13 @@
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
 
         /* Adjust container when banner is visible */
@@ -1856,6 +1881,7 @@
                 font-size: 0.9rem;
             }
         }
+
         /* Celebration Modal Styles */
         .celebration-modal {
             text-align: center;
@@ -1873,8 +1899,15 @@
         }
 
         @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-20px); }
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-20px);
+            }
         }
 
         .setup-summary {
@@ -1910,6 +1943,7 @@
         }
     </style>
 </head>
+
 <body>
     <!-- Offline Status Indicator -->
     <div class="offline-indicator" id="offlineIndicator">
@@ -1984,7 +2018,8 @@
             <div id="legacyPrompt" style="display: none;">
                 <p class="info-box">
                     💡 <strong>Personalize your tasks!</strong>
-                    <a href="#" onclick="openSettingsModal(); return false;">Configure your home</a> to get room-specific tasks.
+                    <a href="#" onclick="openSettingsModal(); return false;">Configure your home</a> to get
+                    room-specific tasks.
                 </p>
             </div>
         </div>
@@ -2013,12 +2048,14 @@
                 <form id="loginFormElement">
                     <div class="form-group">
                         <label for="loginEmail">Email</label>
-                        <input type="email" id="loginEmail" name="email" required autocomplete="email" placeholder="you@example.com">
+                        <input type="email" id="loginEmail" name="email" required autocomplete="email"
+                            placeholder="you@example.com">
                     </div>
 
                     <div class="form-group">
                         <label for="loginPassword">Password</label>
-                        <input type="password" id="loginPassword" name="password" required autocomplete="current-password" placeholder="Enter your password">
+                        <input type="password" id="loginPassword" name="password" required
+                            autocomplete="current-password" placeholder="Enter your password">
                     </div>
 
                     <div class="form-error" id="loginError"></div>
@@ -2044,18 +2081,21 @@
                 <form id="registerFormElement">
                     <div class="form-group">
                         <label for="registerEmail">Email</label>
-                        <input type="email" id="registerEmail" name="email" required autocomplete="email" placeholder="you@example.com">
+                        <input type="email" id="registerEmail" name="email" required autocomplete="email"
+                            placeholder="you@example.com">
                     </div>
 
                     <div class="form-group">
                         <label for="registerPassword">Password</label>
-                        <input type="password" id="registerPassword" name="password" required autocomplete="new-password" placeholder="At least 8 characters">
+                        <input type="password" id="registerPassword" name="password" required
+                            autocomplete="new-password" placeholder="At least 8 characters">
                         <small class="form-hint">Use 8+ characters with letters, numbers, and symbols</small>
                     </div>
 
                     <div class="form-group">
                         <label for="registerConfirmPassword">Confirm Password</label>
-                        <input type="password" id="registerConfirmPassword" name="confirmPassword" required autocomplete="new-password" placeholder="Confirm your password">
+                        <input type="password" id="registerConfirmPassword" name="confirmPassword" required
+                            autocomplete="new-password" placeholder="Confirm your password">
                     </div>
 
                     <div class="form-error" id="registerError"></div>
@@ -2079,7 +2119,8 @@
     <div id="onboardingOverlay" style="display: none;">
         <div id="onboardingModal">
             <h2>Welcome! Let's Set Up Your Home</h2>
-            <p class="onboarding-subtitle">Configure your rooms to get personalized cleaning tasks based on the three-pillars methodology.</p>
+            <p class="onboarding-subtitle">Configure your rooms to get personalized cleaning tasks based on the
+                three-pillars methodology.</p>
 
             <div id="roomConfigSection">
                 <!-- Add room form -->
@@ -2104,9 +2145,9 @@
                         <div class="form-group">
                             <label for="customRoomName">Custom Name (Optional)</label>
                             <input type="text" id="customRoomName"
-                                   placeholder="Leave empty to use default name (e.g., Living Room)"
-                                   maxlength="50">
-                            <small class="form-hint">Optional: Add a specific name only if you have multiple rooms of the same type (e.g., "Master Bedroom", "Guest Bathroom")</small>
+                                placeholder="Leave empty to use default name (e.g., Living Room)" maxlength="50">
+                            <small class="form-hint">Optional: Add a specific name only if you have multiple rooms of
+                                the same type (e.g., "Master Bedroom", "Guest Bathroom")</small>
                         </div>
 
                         <div class="form-group checkbox-group">
@@ -2245,9 +2286,9 @@
                             <div class="form-group">
                                 <label for="customRoomNameSettings">Custom Name (Optional)</label>
                                 <input type="text" id="customRoomNameSettings"
-                                       placeholder="Leave empty to use default name (e.g., Living Room)"
-                                       maxlength="50">
-                                <small class="form-hint">Optional: Add a specific name only if you have multiple rooms of the same type</small>
+                                    placeholder="Leave empty to use default name (e.g., Living Room)" maxlength="50">
+                                <small class="form-hint">Optional: Add a specific name only if you have multiple rooms
+                                    of the same type</small>
                             </div>
 
                             <div class="form-group checkbox-group">
@@ -2262,7 +2303,8 @@
                                     <input type="checkbox" id="autoAddKeystonesSettings" checked>
                                     <span>Automatically add keystone tasks for this room</span>
                                 </label>
-                                <small class="form-help">High-frequency hygiene points like sinks, toilets, and stovetops</small>
+                                <small class="form-help">High-frequency hygiene points like sinks, toilets, and
+                                    stovetops</small>
                             </div>
 
                             <div class="form-actions">
@@ -2289,7 +2331,8 @@
                 <!-- Keystone Tasks Tab -->
                 <div id="keystonesTab" class="tab-pane">
                     <h3>High-Frequency Hygiene Points</h3>
-                    <p class="tab-description">Enable/disable keystone tasks and customize their names. These tasks are interspersed throughout your rotation.</p>
+                    <p class="tab-description">Enable/disable keystone tasks and customize their names. These tasks are
+                        interspersed throughout your rotation.</p>
 
                     <div id="keystonesList">
                         <!-- Keystone items will be rendered here -->
@@ -2319,7 +2362,9 @@
                                 <span class="legend-text">High-frequency hygiene point</span>
                             </span>
                         </div>
-                        <p class="progress-text">Current position: <strong id="currentPositionPreview">-</strong> / <strong id="totalTasksPreview">-</strong></p>
+                        <p class="progress-text">Current position: <strong id="currentPositionPreview">-</strong> /
+                            <strong id="totalTasksPreview">-</strong>
+                        </p>
                     </div>
                 </div>
 
@@ -2348,7 +2393,8 @@
 
                     <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #f1f3f5;">
                         <h3>About CleanStreak</h3>
-                        <p class="tab-description">Learn more about the philosophy and methodology behind your cleaning routine.</p>
+                        <p class="tab-description">Learn more about the philosophy and methodology behind your cleaning
+                            routine.</p>
                         <button class="btn-secondary" onclick="window.open('index.html?preview=true', '_blank')">
                             How CleanStreak Works
                         </button>
@@ -2373,18 +2419,21 @@
             <form id="changePasswordForm">
                 <div class="form-group">
                     <label for="currentPassword">Current Password</label>
-                    <input type="password" id="currentPassword" name="currentPassword" required autocomplete="current-password" placeholder="Enter current password">
+                    <input type="password" id="currentPassword" name="currentPassword" required
+                        autocomplete="current-password" placeholder="Enter current password">
                 </div>
 
                 <div class="form-group">
                     <label for="newPassword">New Password</label>
-                    <input type="password" id="newPassword" name="newPassword" required autocomplete="new-password" placeholder="At least 8 characters">
+                    <input type="password" id="newPassword" name="newPassword" required autocomplete="new-password"
+                        placeholder="At least 8 characters">
                     <small class="form-hint">Use 8+ characters with uppercase, lowercase, numbers, and symbols</small>
                 </div>
 
                 <div class="form-group">
                     <label for="confirmNewPassword">Confirm New Password</label>
-                    <input type="password" id="confirmNewPassword" name="confirmNewPassword" required autocomplete="new-password" placeholder="Confirm new password">
+                    <input type="password" id="confirmNewPassword" name="confirmNewPassword" required
+                        autocomplete="new-password" placeholder="Confirm new password">
                 </div>
 
                 <div class="form-error" id="changePasswordError"></div>
@@ -2422,12 +2471,14 @@
             <form id="deleteAccountForm">
                 <div class="form-group">
                     <label for="deleteAccountEmail">Confirm your email</label>
-                    <input type="email" id="deleteAccountEmail" name="email" required autocomplete="email" placeholder="Enter your email">
+                    <input type="email" id="deleteAccountEmail" name="email" required autocomplete="email"
+                        placeholder="Enter your email">
                 </div>
 
                 <div class="form-group">
                     <label for="deleteAccountConfirmation">Type "DELETE MY ACCOUNT" to confirm</label>
-                    <input type="text" id="deleteAccountConfirmation" name="confirmation" required placeholder="DELETE MY ACCOUNT">
+                    <input type="text" id="deleteAccountConfirmation" name="confirmation" required
+                        placeholder="DELETE MY ACCOUNT">
                 </div>
 
                 <div class="form-error" id="deleteAccountError"></div>
@@ -2471,8 +2522,8 @@
         // UPDATE THIS: Replace the second URL with your actual Railway Backend URL
         const API_BASE_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
             ? 'http://localhost:3000/api'
-            : 'https://api.stenotes.com/api'; 
-        
+            : 'https://api.stenotes.com/api';
+
         const API_TIMEOUT = 10000; // 10 seconds
 
         const cleaningTasks = [
@@ -3218,7 +3269,7 @@
                 } catch (error) {
                     // Check if it's a 409 "already completed" error
                     const isAlreadyCompleted = error.response?.status === 409 ||
-                                              error.message?.includes('already completed');
+                        error.message?.includes('already completed');
 
                     if (isAlreadyCompleted) {
                         // 409 means task is already completed - treat as success
@@ -4071,6 +4122,15 @@
 
             if (task.isLegacy) {
                 // Legacy mode
+                if (!AppState.user.isAuthenticated) {
+                    // If not authenticated, do not show random task
+                    document.getElementById('taskText').textContent = 'Please create an account to start building your home.';
+                    document.getElementById('taskProgress').style.display = 'none';
+                    document.getElementById('taskContext').style.display = 'none';
+                    document.getElementById('legacyPrompt').style.display = 'none';
+                    return;
+                }
+
                 document.getElementById('taskProgress').style.display = 'none';
                 document.getElementById('taskContext').style.display = 'none';
                 document.getElementById('legacyPrompt').style.display = 'block';
@@ -4942,7 +5002,7 @@
             }
 
             // Default: all applicable keystones selected
-            KeystoneOnboardingState.selectedKeystones = applicableKeystones.map(k => ({...k, selected: true}));
+            KeystoneOnboardingState.selectedKeystones = applicableKeystones.map(k => ({ ...k, selected: true }));
 
             const html = applicableKeystones.map((keystone, index) => `
                 <div class="keystone-onboarding-item selected" data-keystone-index="${index}" onclick="toggleKeystoneSelection(${index})">
@@ -5077,17 +5137,17 @@
                 // Fetch data for summary
                 const roomsResponse = await RoomAPI.getUserRooms();
                 const keystonesResponse = await KeystoneAPI.getUserKeystones();
-                
+
                 // Fetch current task to get total rotation count
                 const taskResponse = await TaskAPI.getCurrentTask();
 
                 // Populate stats
                 document.getElementById('roomCount').textContent = roomsResponse.rooms?.length || 0;
-                
+
                 // Filter active keystones
                 const activeKeystones = (keystonesResponse.keystone_tasks || []).filter(k => k.is_active !== false);
                 document.getElementById('keystoneCount').textContent = activeKeystones.length;
-                
+
                 // Get total tasks count
                 document.getElementById('totalTaskCount').textContent = taskResponse.task?.total_tasks || 0;
 
@@ -5369,9 +5429,9 @@
                     <div class="task-description">${task.description || 'Task description unavailable'}</div>
                     <div class="task-meta">
                         ${task.task_type === 'pillar'
-                            ? `<span class="badge pillar">${task.room ? task.room.name : 'Room'} - ${task.pillar_type}</span>`
-                            : `<span class="badge keystone">Keystone</span>`
-                        }
+                    ? `<span class="badge pillar">${task.room ? task.room.name : 'Room'} - ${task.pillar_type}</span>`
+                    : `<span class="badge keystone">Keystone</span>`
+                }
                     </div>
                 </div>
             `).join('');
@@ -5665,7 +5725,7 @@
             const index = SettingsState.rooms.findIndex(r => r.id === roomId);
             if (index > 0) {
                 [SettingsState.rooms[index], SettingsState.rooms[index - 1]] =
-                [SettingsState.rooms[index - 1], SettingsState.rooms[index]];
+                    [SettingsState.rooms[index - 1], SettingsState.rooms[index]];
 
                 SettingsState.rooms.forEach((room, i) => {
                     room.sort_order = i + 1;
@@ -5683,7 +5743,7 @@
             const index = SettingsState.rooms.findIndex(r => r.id === roomId);
             if (index < SettingsState.rooms.length - 1) {
                 [SettingsState.rooms[index], SettingsState.rooms[index + 1]] =
-                [SettingsState.rooms[index + 1], SettingsState.rooms[index]];
+                    [SettingsState.rooms[index + 1], SettingsState.rooms[index]];
 
                 SettingsState.rooms.forEach((room, i) => {
                     room.sort_order = i + 1;
@@ -6261,6 +6321,16 @@
                 showAuthModal('login');
             } else if (action === 'register') {
                 showAuthModal('register');
+            } else if (!AppState.user.isAuthenticated) {
+                // User requirement: Straight into onboarding, no random task
+                // We'll hide the task card content essentially by overlapping the modal
+                // But let's also ensure the background doesn't show a task
+                document.getElementById('taskText').textContent = 'Please log in to start';
+                document.getElementById('taskProgress').style.display = 'none';
+                document.getElementById('legacyPrompt').style.display = 'none';
+
+                // Show registration immediately
+                showAuthModal('register');
             }
         }
 
@@ -6271,4 +6341,5 @@
         }
     </script>
 </body>
+
 </html>
