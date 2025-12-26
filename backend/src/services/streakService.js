@@ -115,7 +115,7 @@ class StreakService {
         where: {
           user_id: userId,
           task_name: sanitizedTaskName,
-          completed_at: {
+          completed_date: {
             gte: completionDay,
             lt: new Date(completionDay.getTime() + 24 * 60 * 60 * 1000)
           }
@@ -195,7 +195,7 @@ class StreakService {
           data: {
             user_id: userId,
             task_name: sanitizedTaskName,
-            completed_at: completionDate,
+            completed_date: completionDate,
             notes: sanitizedNotes,
             created_at: new Date()
           }
