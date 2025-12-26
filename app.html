@@ -6,6 +6,100 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Daily Clean</title>
     <style>
+        :root {
+            /* Branding Colors */
+            --primary: #667eea;
+            --primary-dark: #5a67d8;
+            --secondary: #764ba2;
+            --accent: #48bb78;
+            --accent-dark: #38a169;
+            --danger: #e53e3e;
+            --warning: #ed8936;
+
+            /* Fog of War Visuals */
+            --glass-blur: 4px;
+            --glass-opacity: 0.4;
+            --surface-grayscale: 80%;
+            --surface-brightness: 0.9;
+            --floor-grit-opacity: 0.5;
+            --transition-speed: 1.2s;
+
+            /* Standard UI */
+            --bg-body: #f7fafc;
+            --bg-card: #ffffff;
+            --text-main: #2d3748;
+            --text-light: #718096;
+            --radius: 12px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        /* FOG OF WAR LAYERS */
+        .fog-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            /* Let clicks pass through */
+            z-index: 50;
+            /* Above regular content, below modals (usually 100+) */
+            transition: all var(--transition-speed) ease;
+        }
+
+        /* Layer 1: Glass (Blur) */
+        .fog-glass {
+            backdrop-filter: blur(var(--glass-blur));
+            background: rgba(255, 255, 255, var(--glass-opacity));
+        }
+
+        /* Layer 2: Surface (Noise Overlay) */
+        .fog-noise {
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.15'/%3E%3C/svg%3E");
+            opacity: 1;
+            mix-blend-mode: overlay;
+        }
+
+        /* Layer 3: Floor (Grit Gradient) */
+        .fog-grit {
+            background: linear-gradient(to top, rgba(50, 50, 50, 0.8) 0%, transparent 35%);
+            mix-blend-mode: multiply;
+            opacity: var(--floor-grit-opacity);
+            transform: translateY(0);
+        }
+
+        /* CLEAN STATES (Applied via JS) */
+
+        /* 1. Glass Cleared */
+        body.state-glass-clear {
+            --glass-blur: 0px;
+            --glass-opacity: 0;
+        }
+
+        /* 2. Surfaces Cleared */
+        body.state-surfaces-clear .fog-noise {
+            opacity: 0;
+        }
+
+        /* Non-cleared state for body (Default Muted Look) */
+        body:not(.state-surfaces-clear) .container {
+            filter: grayscale(var(--surface-grayscale)) brightness(var(--surface-brightness));
+            transition: filter var(--transition-speed) ease;
+        }
+
+        /* Reset filter when cleared */
+        body.state-surfaces-clear .container {
+            filter: grayscale(0%) brightness(100%);
+            transition: filter var(--transition-speed) ease;
+        }
+
+        /* 3. Floors Cleared */
+        body.state-floors-clear .fog-grit {
+            transform: translateY(100%);
+            /* Slide down out of view */
+            opacity: 0;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -1964,6 +2058,10 @@
         <span>&#8987;</span>
         <span id="syncQueueText">Pending sync...</span>
     </div>
+
+    <div id="fogLayerNoise" class="fog-layer fog-noise"></div>
+    <div id="fogLayerGrit" class="fog-layer fog-grit"></div>
+    <div id="fogLayerGlass" class="fog-layer fog-glass"></div>
 
     <div class="container">
         <!-- User Header -->
@@ -4112,8 +4210,31 @@
             localStorage.setItem('migration_banner_dismissed', 'true');
         }
 
+        // --- Fog of War Logic ---
+        function updateFogState(task) {
+            const body = document.body;
+            body.classList.remove('state-glass-clear', 'state-surfaces-clear', 'state-floors-clear');
+
+            if (!task || task.isLegacy) {
+                body.classList.add('state-glass-clear', 'state-surfaces-clear', 'state-floors-clear');
+                return;
+            }
+
+            if (task.pillarType === 'glass_clear') {
+                // All Fog Active
+            } else if (task.pillarType === 'surfaces_wiped') {
+                body.classList.add('state-glass-clear');
+            } else if (task.pillarType === 'floors_finished') {
+                body.classList.add('state-glass-clear', 'state-surfaces-clear');
+            } else {
+                body.classList.add('state-glass-clear', 'state-surfaces-clear');
+            }
+        }
+
         function displayCurrentTask() {
             const task = AppState.currentTask;
+
+            updateFogState(task);
 
             if (!task) return;
 
@@ -4136,10 +4257,11 @@
                 document.getElementById('legacyPrompt').style.display = 'block';
             } else {
                 // Rotation mode
-                document.getElementById('taskProgress').style.display = 'block';
+                // Fog of War replaces the progress bar
+                document.getElementById('taskProgress').style.display = 'none';
                 document.getElementById('legacyPrompt').style.display = 'none';
 
-                // Update progress
+                // Update progress (Still updating DOM in case we revert, but hiding it)
                 const percentage = (task.position / task.totalTasks) * 100;
                 document.querySelector('.progress-fill').style.width = `${percentage}%`;
                 document.getElementById('currentPosition').textContent = task.position;
